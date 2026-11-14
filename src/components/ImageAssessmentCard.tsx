@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   UltrasoundImageItem, 
   ImageEvaluationResponse, 
@@ -34,6 +34,8 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
   onOpenLightbox,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isInverted, setIsInverted] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const isQ1 = evaluation?.q1_classification != null;
   const isQ2 = evaluation?.q2_realism != null;
@@ -50,6 +52,27 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
   const handleSingleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && onReplaceImage) {
       onReplaceImage(image.id, e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0] && onReplaceImage) {
+      onReplaceImage(image.id, e.dataTransfer.files[0]);
     }
   };
 
@@ -118,54 +141,187 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 divide-y-2 lg:divide-y-0 lg:divide-x-2 divide-black">
         
         {/* ================= LEFT: ULTRASOUND VIEWPORT (5 cols) ================= */}
-        <div className="lg:col-span-5 bg-[#12161f] p-4 sm:p-5 flex flex-col justify-between">
-          <div className="relative aspect-[4/3] w-full bg-black rounded-2xl border-2 border-black flex items-center justify-center overflow-hidden group select-none shadow-neo-sm">
-            {image.imageUrl ? (
-              <>
-                <img
-                  src={image.imageUrl}
-                  alt={`Scan ${image.id}`}
-                  className="w-full h-full object-contain cursor-pointer"
-                  onClick={() => onOpenLightbox(image)}
-                />
+        <div className="lg:col-span-5 bg-[#F8FAFC] p-4 sm:p-5 flex flex-col justify-between gap-3 min-w-0">
+          
+          {/* Medical Ultrasound Console Monitor Frame */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative flex-1 w-full bg-[#080C14] rounded-2xl border-2 border-black flex flex-col overflow-hidden group select-none shadow-neo-sm transition-all ${
+              isDragging ? 'ring-4 ring-[#9CDBFA] border-[#9CDBFA]' : ''
+            }`}
+          >
+            {/* Top Telemetry Console Bar */}
+            <div className="bg-[#0e1524] px-3.5 py-2.5 border-b border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-300">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse" />
+                <span className="font-bold text-white tracking-wider">ULTRASOUND VIEWPORT</span>
+              </div>
+              <div className="flex items-center gap-2 text-[10px]">
+                <span className="text-slate-400">7.5 MHz</span>
+                <span className="text-[#9CDBFA] bg-[#9CDBFA]/10 px-2 py-0.5 rounded border border-[#9CDBFA]/30 font-bold">
+                  BLIND EVAL
+                </span>
+              </div>
+            </div>
 
-                {/* 10 mm Caliper Scale in Sky Blue */}
-                <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 bg-black/80 px-2.5 py-1 rounded-lg border border-slate-700 text-[10px] font-mono text-white pointer-events-none">
-                  <span className="w-4 h-0.5 bg-[#9CDBFA] inline-block" />
-                  <span>10 mm</span>
+            {/* Sonogram Screen / Active Area */}
+            <div className="relative flex-1 min-h-[320px] sm:min-h-[360px] flex items-center justify-center p-3 bg-black overflow-hidden">
+              {/* Sector Beam & Radar Graticule Background */}
+              <svg
+                className="absolute inset-0 w-full h-full opacity-20 pointer-events-none"
+                viewBox="0 0 400 300"
+                preserveAspectRatio="xMidYMid meet"
+              >
+                <path d="M 200 10 L 385 290 A 310 310 0 0 1 15 290 Z" fill="none" stroke="#9CDBFA" strokeWidth="1" strokeDasharray="3 3" />
+                <circle cx="200" cy="10" r="100" fill="none" stroke="#9CDBFA" strokeWidth="0.5" strokeDasharray="2 4" />
+                <circle cx="200" cy="10" r="190" fill="none" stroke="#9CDBFA" strokeWidth="0.5" strokeDasharray="2 4" />
+                <circle cx="200" cy="10" r="280" fill="none" stroke="#9CDBFA" strokeWidth="0.5" strokeDasharray="2 4" />
+                <line x1="200" y1="10" x2="200" y2="290" stroke="#9CDBFA" strokeWidth="0.5" strokeDasharray="2 4" />
+              </svg>
+
+              {image.imageUrl ? (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <img
+                    src={image.imageUrl}
+                    alt={`Scan ${image.id}`}
+                    style={{ filter: isInverted ? 'invert(1) hue-rotate(180deg)' : 'none' }}
+                    className="max-h-[360px] w-full object-contain cursor-pointer transition-all duration-150"
+                    onClick={() => onOpenLightbox(image)}
+                  />
+
+                  {/* 10 mm Caliper Scale in Sky Blue */}
+                  <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-black/85 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-slate-700 text-[10px] font-mono text-white pointer-events-none shadow-sm">
+                    <span className="w-5 h-0.5 bg-[#9CDBFA] inline-block shadow-[0_0_6px_#9CDBFA]" />
+                    <span className="text-[#9CDBFA] font-bold">10 mm</span>
+                    <span className="text-slate-500">|</span>
+                    <span className="text-slate-300">Caliper</span>
+                  </div>
+
+                  {/* Floating Action Controls (Invert + Enlarge) */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={() => setIsInverted((v) => !v)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold border-2 border-black shadow-neo-sm transition flex items-center gap-1 ${
+                        isInverted
+                          ? 'bg-[#9CDBFA] text-black font-black'
+                          : 'bg-white text-black hover:bg-slate-100'
+                      }`}
+                      title="Toggle Invert / Negative Contrast (useful for follicle boundary inspection)"
+                    >
+                      <span>{isInverted ? 'Normal' : 'Invert'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenLightbox(image)}
+                      className="p-1.5 rounded-lg bg-white text-black border-2 border-black shadow-neo-sm hover:bg-[#9CDBFA] transition"
+                      title="View in full-resolution lightbox"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                  </div>
+
+                  {/* Watermark badge top left */}
+                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 border border-slate-800 text-[9px] font-mono text-slate-400 pointer-events-none">
+                    {image.id}
+                  </div>
                 </div>
+              ) : (
+                /* Interactive Standby & Dropzone */
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-full flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-white/[0.04] transition-colors rounded-xl border border-dashed border-slate-700 hover:border-[#9CDBFA] group/empty"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-[#9CDBFA] border-2 border-black shadow-neo-sm flex items-center justify-center mb-3 group-hover/empty:scale-105 group-hover/empty:bg-[#82CDF6] transition-transform">
+                    <FileImage className="w-7 h-7 text-black stroke-[2]" />
+                  </div>
 
-                {/* Enlarge Button */}
+                  <div className="space-y-1">
+                    <div className="text-sm font-black text-white flex items-center justify-center gap-1.5">
+                      <span>Scan Slot #{slotIndex}</span>
+                      <span className="text-[10px] font-mono text-[#9CDBFA] px-1.5 py-0.5 rounded bg-[#9CDBFA]/10 border border-[#9CDBFA]/30">
+                        Standby
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 font-medium max-w-[240px]">
+                      Drag & drop ultrasound scan here, or click to browse
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="mt-4 px-4 py-1.5 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo-sm transition active:translate-x-0.5 active:translate-y-0.5"
+                  >
+                    Select Scan Image
+                  </button>
+
+                  <div className="mt-2 text-[10px] font-mono text-slate-500">
+                    PNG • JPG • WEBP • DICOM
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Console Screen Footer Status */}
+            <div className="bg-[#0e1524] px-3.5 py-2 border-t border-slate-800 flex items-center justify-between text-[10px] font-mono text-slate-400">
+              <span className="text-slate-300">
+                {image.imageUrl ? 'ANONYMIZED CLINICAL DATA' : 'AWAITING SCAN UPLOAD'}
+              </span>
+              <span className="text-slate-500">10 mm CALIPER REF</span>
+            </div>
+          </div>
+
+          {/* Bottom Bar: Clean Quick Actions in White Card */}
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700 bg-white p-3 rounded-2xl border-2 border-black shadow-neo-sm">
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <span className="text-black font-black bg-[#FAF9F6] px-2 py-0.5 rounded-lg border border-black/20">
+                Scan #{globalIndex}
+              </span>
+              <span className="text-slate-600 font-medium text-[11px]">
+                {image.imageUrl ? 'Ready for evaluation' : 'Empty slot'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {image.imageUrl ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onOpenLightbox(image)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black text-black bg-[#FAF9F6] hover:bg-[#9CDBFA] border border-black shadow-neo-sm transition"
+                  >
+                    <Maximize2 className="w-3 h-3 stroke-[2.5]" />
+                    <span>Lightbox</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black text-black bg-white hover:bg-slate-100 border border-black shadow-neo-sm transition"
+                  >
+                    <Upload className="w-3 h-3 stroke-[2.5]" />
+                    <span>Replace</span>
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => onOpenLightbox(image)}
-                  className="absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-white text-black border-2 border-black shadow-neo-sm hover:bg-[#9CDBFA] transition"
-                  title="View in full-resolution lightbox"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-black text-black bg-[#9CDBFA] hover:bg-[#82CDF6] border border-black shadow-neo-sm transition"
                 >
-                  <Maximize2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <Upload className="w-3 h-3 stroke-[2.5]" />
+                  <span>Upload Image</span>
                 </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-950 hover:bg-slate-900 transition text-slate-400 hover:text-white"
-              >
-                <FileImage className="w-10 h-10 mb-2 stroke-1 text-[#9CDBFA]" />
-                <span className="text-xs font-bold text-white">Click to Select Scan</span>
-                <span className="text-[11px] text-slate-500 mt-1 font-mono">Slot #{slotIndex}</span>
-              </button>
-            )}
+              )}
+            </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-xs text-slate-400 font-semibold px-1">
-            <span className="text-white font-mono">Scan #{globalIndex}</span>
-            <span>Click image to view high-res</span>
-          </div>
         </div>
 
         {/* ================= RIGHT: THE 4 STANDARDIZED QUESTIONS (7 cols) ================= */}
-        <div className="lg:col-span-7 p-5 sm:p-7 space-y-6 bg-white">
+        <div className="lg:col-span-7 p-5 sm:p-7 space-y-6 bg-white min-w-0">
           
           {/* Q1. Image Classification */}
           <div className="space-y-2.5">
