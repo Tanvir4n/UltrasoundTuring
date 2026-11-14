@@ -141,7 +141,7 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
               </h1>
 
               <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">
-                For Ovarian Morphology Classification: <span className="underline decoration-wavy decoration-[#9CDBFA]">CNN–Vision Transformer Fusion</span> & Bidirectional Cross-Domain Generalization
+                For Ovarian Morphology Classification: CNN–Vision Transformer Fusion & Bidirectional Cross-Domain Generalization
               </h2>
             </div>
 
