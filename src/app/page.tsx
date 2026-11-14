@@ -11,6 +11,25 @@ import { ImageLightboxModal } from '../components/ImageLightboxModal';
 
 import { Upload, ChevronRight, ChevronLeft, Download, Layers } from 'lucide-react';
 
+const DEFAULT_TOTAL_SLOTS = 100; // Exactly 10 pages of 10 slots each = 100 slots
+
+// Helper to ensure at least 100 slots (10 pages) are always available
+const padSlotsToMinimum = (items: UltrasoundImageItem[]): UltrasoundImageItem[] => {
+  if (items.length >= DEFAULT_TOTAL_SLOTS) {
+    return items;
+  }
+  const remainingCount = DEFAULT_TOTAL_SLOTS - items.length;
+  const padding: UltrasoundImageItem[] = Array.from({ length: remainingCount }).map((_, idx) => {
+    const globalIdx = items.length + idx + 1;
+    return {
+      id: `SCAN-${String(globalIdx).padStart(3, '0')}`,
+      imageUrl: '',
+      slotNumber: ((globalIdx - 1) % 10) + 1,
+    };
+  });
+  return [...items, ...padding];
+};
+
 export default function AssessmentPage() {
   const [expertId, setExpertId] = useState<string>('');
   const [images, setImages] = useState<UltrasoundImageItem[]>([]);
@@ -23,9 +42,9 @@ export default function AssessmentPage() {
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const slotsSectionRef = useRef<HTMLDivElement>(null);
 
-  // Initialize initial empty 10 slots if no images exist
-  const initializeEmptySlots = (count: number) => {
-    const slots: UltrasoundImageItem[] = Array.from({ length: count }).map((_, idx) => ({
+  // Initialize 100 empty slots (10 pages * 10 slots)
+  const initialize100Slots = () => {
+    const slots: UltrasoundImageItem[] = Array.from({ length: DEFAULT_TOTAL_SLOTS }).map((_, idx) => ({
       id: `SCAN-${String(idx + 1).padStart(3, '0')}`,
       imageUrl: '',
       slotNumber: (idx % 10) + 1,
@@ -39,7 +58,7 @@ export default function AssessmentPage() {
       const res = await fetch('/api/images');
       const data = await res.json();
       if (data && Array.isArray(data.images) && data.images.length > 0) {
-        setImages(data.images);
+        setImages(padSlotsToMinimum(data.images));
         return;
       }
     } catch (err) {
@@ -52,7 +71,7 @@ export default function AssessmentPage() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setImages(parsed);
+          setImages(padSlotsToMinimum(parsed));
           return;
         }
       }
@@ -60,7 +79,7 @@ export default function AssessmentPage() {
       console.warn(e);
     }
 
-    initializeEmptySlots(10);
+    initialize100Slots();
   };
 
   useEffect(() => {
@@ -110,11 +129,13 @@ export default function AssessmentPage() {
         if (newItems.length === files.length) {
           newItems.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' }));
           
-          setImages(newItems);
+          // Pad to ensure at least 100 slots (10 pages)
+          const allSlots = padSlotsToMinimum(newItems);
+          setImages(allSlots);
           setCurrentPage(1);
           
           try {
-            localStorage.setItem('ous_custom_images', JSON.stringify(newItems));
+            localStorage.setItem('ous_custom_images', JSON.stringify(allSlots));
           } catch (e) {
             console.warn('Storage full for images, working in memory');
           }
@@ -166,7 +187,7 @@ export default function AssessmentPage() {
   // Reset all
   const handleClearImages = () => {
     if (confirm('Clear all images and reset scores?')) {
-      initializeEmptySlots(10);
+      initialize100Slots();
       setEvaluations({});
       localStorage.removeItem('ous_custom_images');
       localStorage.removeItem('ous_evaluations');
@@ -184,8 +205,8 @@ export default function AssessmentPage() {
     slotsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Pagination Math (Strictly 10 slots per page)
-  const totalPages = Math.max(1, Math.ceil(images.length / itemsPerPage));
+  // Pagination Math (Strictly 10 slots per page, always at least 10 pages)
+  const totalPages = Math.max(10, Math.ceil(images.length / itemsPerPage));
   const pageStartIndex = (currentPage - 1) * itemsPerPage;
   const pageImages = useMemo(() => {
     return images.slice(pageStartIndex, pageStartIndex + itemsPerPage);
@@ -198,7 +219,7 @@ export default function AssessmentPage() {
   return (
     <div className="flex-1 flex flex-col bg-[#fbfbf9] text-[#111827] min-h-screen">
       
-      {/* 1. HERO & TOP NAVBAR (With Sky Blue #9CDBFA Accent) */}
+      {/* 1. HERO & TOP NAVBAR */}
       <HeaderHero
         expertId={expertId}
         setExpertId={setExpertId}
@@ -216,20 +237,20 @@ export default function AssessmentPage() {
         <div className="bg-white border-2 border-black rounded-3xl p-5 sm:p-6 shadow-neo-md flex flex-wrap items-center justify-between gap-4">
           
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-2xl bg-[#9CDBFA] text-black font-black text-sm border-2 border-black shadow-neo-sm flex items-center justify-center">
+            <span className="w-11 h-11 rounded-2xl bg-[#9CDBFA] text-black font-black text-sm border-2 border-black shadow-neo-sm flex items-center justify-center">
               P{currentPage}
             </span>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-black text-lg sm:text-xl text-black">
-                  Evaluation Batch: Slots #{pageStartIndex + 1} to #{Math.min(pageStartIndex + itemsPerPage, images.length)}
+                  Page {currentPage} of {totalPages}: Slots #{pageStartIndex + 1} to #{Math.min(pageStartIndex + itemsPerPage, images.length)}
                 </span>
                 <span className="bg-[#84CC16] text-black border-2 border-black px-2.5 py-0.5 rounded-full text-xs font-bold shadow-neo-sm">
                   10 Scans / Page
                 </span>
               </div>
               <p className="text-xs text-slate-600 font-medium mt-0.5">
-                Answer each standardized question independently for all 10 slots on this page.
+                Evaluation format: 10 image slots per page across 10 standardized pages (100 total scans).
               </p>
             </div>
           </div>
@@ -288,7 +309,7 @@ export default function AssessmentPage() {
         {/* Bottom Page Navigation Box */}
         <div className="bg-white border-2 border-black rounded-3xl p-6 shadow-neo-md flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-sm font-bold text-slate-800">
-            Page {currentPage} of {totalPages} • 10 image slots per page
+            Page {currentPage} of {totalPages} • 10 image slots per page (100 total slots)
           </div>
 
           <div className="flex items-center gap-3">
@@ -315,7 +336,7 @@ export default function AssessmentPage() {
                 }}
                 className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo transition active:translate-x-0.5 active:translate-y-0.5"
               >
-                <span>Next Page (Slots #{pageStartIndex + 11}–#{pageStartIndex + 20})</span>
+                <span>Next Page (Page {currentPage + 1})</span>
                 <ChevronRight className="w-4 h-4 stroke-[3]" />
               </button>
             ) : (
@@ -332,7 +353,7 @@ export default function AssessmentPage() {
         </div>
       </main>
 
-      {/* 4. STICKY 10-SLOT MINI-MAP & NAV */}
+      {/* 4. STICKY 10-SLOT MINI-MAP & 10-PAGE SELECTOR */}
       <PageNavigation
         currentPage={currentPage}
         totalPages={totalPages}

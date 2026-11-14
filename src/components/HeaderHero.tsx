@@ -148,7 +148,7 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
             {/* Description */}
             <p className="text-base text-slate-700 leading-relaxed max-w-xl font-medium">
               Standardized expert questionnaire for blind real vs. synthetic ovarian ultrasound evaluation. 
-              Assess anatomical realism, follicle contours, and latent diffusion artifacts across <strong>10 scans per page</strong>.
+              Assess anatomical realism, follicle contours, and latent diffusion artifacts across <strong>10 scans per page across 10 pages (100 total scans)</strong>.
             </p>
 
             {/* Action Buttons & Observer ID */}
