@@ -267,7 +267,7 @@ export default function AssessmentPage() {
             <button
               type="button"
               onClick={() => bulkFileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo-sm transition active:translate-x-0.5 active:translate-y-0.5"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Add Images</span>
@@ -276,7 +276,7 @@ export default function AssessmentPage() {
             <button
               type="button"
               onClick={handleExportCSV}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-white hover:bg-slate-100 text-black border-2 border-black shadow-neo-sm transition active:translate-x-0.5 active:translate-y-0.5"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-white hover:bg-slate-100 hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
@@ -320,7 +320,7 @@ export default function AssessmentPage() {
                   setCurrentPage((p) => p - 1);
                   window.scrollTo({ top: 400, behavior: 'smooth' });
                 }}
-                className="inline-flex items-center gap-1 px-5 py-2.5 rounded-full text-xs font-bold bg-white border-2 border-black text-black hover:bg-slate-100 shadow-neo transition active:translate-x-0.5 active:translate-y-0.5"
+                className="inline-flex items-center gap-1 px-5 py-2.5 rounded-full text-xs font-bold bg-white border-2 border-black text-black hover:bg-slate-100 hover:-translate-y-0.5 hover:shadow-neo-md shadow-neo transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4 stroke-[3]" />
                 <span>Previous Page</span>
@@ -334,7 +334,7 @@ export default function AssessmentPage() {
                   setCurrentPage((p) => p + 1);
                   window.scrollTo({ top: 400, behavior: 'smooth' });
                 }}
-                className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo transition active:translate-x-0.5 active:translate-y-0.5"
+                className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] hover:-translate-y-0.5 hover:shadow-neo-md text-black border-2 border-black shadow-neo transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
               >
                 <span>Next Page (Page {currentPage + 1})</span>
                 <ChevronRight className="w-4 h-4 stroke-[3]" />
@@ -343,7 +343,7 @@ export default function AssessmentPage() {
               <button
                 type="button"
                 onClick={handleExportCSV}
-                className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] text-black border-2 border-black shadow-neo transition active:translate-x-0.5 active:translate-y-0.5"
+                className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] hover:-translate-y-0.5 hover:shadow-neo-md text-black border-2 border-black shadow-neo transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
               >
                 <Download className="w-4 h-4 stroke-[3]" />
                 <span>Export Final Assessment CSV</span>

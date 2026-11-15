@@ -45,7 +45,7 @@ export const PageNavigation: React.FC<PageNavigationProps> = ({
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-3">
         
         {/* Left: 10 Slot Quick Mini-map for Active Page */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full lg:w-auto pb-1 lg:pb-0">
           <span className="text-xs font-black text-black font-mono shrink-0">
             Page {currentPage} Slots:
           </span>
@@ -62,12 +62,12 @@ export const PageNavigation: React.FC<PageNavigationProps> = ({
                   key={img.id || idx}
                   type="button"
                   onClick={() => scrollToSlot(slotNum)}
-                  className={`w-7 h-7 rounded-xl text-xs font-black transition-all flex items-center justify-center border-2 border-black ${
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-xs font-black shrink-0 transition-all duration-150 flex items-center justify-center border-2 border-black cursor-pointer ${
                     isFilled
-                      ? 'bg-[#84CC16] text-black shadow-neo-sm'
+                      ? 'bg-[#84CC16] text-black shadow-neo-sm hover:-translate-y-0.5 hover:shadow-neo'
                       : isPartial
-                      ? 'bg-[#FEF08A] text-black shadow-neo-sm'
-                      : 'bg-white text-slate-700 hover:bg-slate-100'
+                      ? 'bg-[#FEF08A] text-black shadow-neo-sm hover:-translate-y-0.5 hover:shadow-neo'
+                      : 'bg-white text-slate-800 hover:bg-slate-100 hover:-translate-y-0.5 hover:shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5'
                   }`}
                   title={`Slot #${slotNum}: ${isFilled ? 'Complete' : isPartial ? 'In progress' : 'Unrated'}`}
                 >
@@ -82,8 +82,8 @@ export const PageNavigation: React.FC<PageNavigationProps> = ({
           </span>
         </div>
 
-        {/* Center: 10 Pages Direct Jump Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 lg:pb-0">
+        {/* Center: 10 Pages Direct Jump Pills (no-scrollbar, perfectly aligned) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 lg:pb-0 shrink-0">
           <span className="text-xs font-black text-black font-mono shrink-0 pr-1">
             Pages:
           </span>
@@ -98,10 +98,10 @@ export const PageNavigation: React.FC<PageNavigationProps> = ({
                   onPageChange(pageNum);
                   window.scrollTo({ top: 380, behavior: 'smooth' });
                 }}
-                className={`w-7 h-7 rounded-xl text-xs font-black transition-all border-2 border-black flex items-center justify-center ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-xs font-black shrink-0 transition-all duration-150 border-2 border-black flex items-center justify-center cursor-pointer ${
                   isCurrent
-                    ? 'bg-[#9CDBFA] text-black shadow-neo-sm font-black scale-105'
-                    : 'bg-white text-slate-700 hover:bg-slate-100'
+                    ? 'bg-[#9CDBFA] text-black shadow-neo-sm font-black scale-105 ring-2 ring-black/40'
+                    : 'bg-white text-slate-800 hover:bg-[#EBF7FD] hover:-translate-y-0.5 hover:shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5'
                 }`}
                 title={`Jump to Page ${pageNum}`}
               >
@@ -120,9 +120,9 @@ export const PageNavigation: React.FC<PageNavigationProps> = ({
               onPageChange(currentPage - 1);
               window.scrollTo({ top: 380, behavior: 'smooth' });
             }}
-            className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-white border-2 border-black text-black hover:bg-slate-50 shadow-neo-sm transition active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="group inline-flex items-center gap-1 px-4 py-2 rounded-full text-xs font-extrabold bg-white border-2 border-black text-black hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-neo shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-neo-sm cursor-pointer"
           >
-            <ChevronLeft className="w-3.5 h-3.5 stroke-[3]" />
+            <ChevronLeft className="w-3.5 h-3.5 stroke-[3] transition-transform group-hover:-translate-x-0.5" />
             <span>Prev</span>
           </button>
 
@@ -133,18 +133,18 @@ export const PageNavigation: React.FC<PageNavigationProps> = ({
                 onPageChange(currentPage + 1);
                 window.scrollTo({ top: 380, behavior: 'smooth' });
               }}
-              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo-sm transition active:translate-x-0.5 active:translate-y-0.5"
+              className="group inline-flex items-center gap-1.5 px-4.5 py-2 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
             >
               <span>Next (P{currentPage + 1})</span>
-              <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
+              <ChevronRight className="w-3.5 h-3.5 stroke-[3] transition-transform group-hover:translate-x-0.5" />
             </button>
           ) : (
             <button
               type="button"
               onClick={onExportCSV}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] text-black border-2 border-black shadow-neo-sm transition active:translate-x-0.5 active:translate-y-0.5"
+              className="group inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5 stroke-[3]" />
+              <Download className="w-3.5 h-3.5 stroke-[3] transition-transform group-hover:translate-y-0.5" />
               <span>Export CSV</span>
             </button>
           )}

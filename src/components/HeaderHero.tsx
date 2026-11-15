@@ -106,7 +106,7 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-5 py-2 rounded-full text-xs sm:text-sm font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo-sm transition active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+            className="px-5 py-2 rounded-full text-xs sm:text-sm font-black bg-[#9CDBFA] hover:bg-[#82CDF6] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
           >
             Upload Scans
           </button>
@@ -114,7 +114,7 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
           <button
             type="button"
             onClick={onExportCSV}
-            className="px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-white hover:bg-slate-50 text-black border-2 border-black shadow-neo-sm transition flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+            className="px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-white hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
           >
             <span>Download</span>
             <span className="text-[10px]">▼</span>
@@ -141,7 +141,7 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
               </h1>
 
               <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">
-                For Ovarian Morphology Classification: CNN–Vision Transformer Fusion & Bidirectional Cross-Domain Generalization
+                For Ovarian Morphology Classification: CNN–Vision Transformer Fusion &amp; Bidirectional Cross-Domain Generalization
               </h2>
             </div>
 
@@ -156,7 +156,7 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
               <button
                 type="button"
                 onClick={onScrollToSlots}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo transition active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-black bg-[#9CDBFA] hover:bg-[#82CDF6] hover:-translate-y-0.5 hover:shadow-neo-md text-black border-2 border-black shadow-neo transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
               >
                 <span>Start Assessment</span>
                 <ArrowRight className="w-4 h-4 stroke-[2.5]" />
@@ -165,7 +165,7 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-5 py-3 rounded-full text-sm font-extrabold bg-white hover:bg-slate-50 text-black border-2 border-black shadow-neo transition active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                className="inline-flex items-center gap-1.5 px-5 py-3 rounded-full text-sm font-extrabold bg-white hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-neo-md text-black border-2 border-black shadow-neo transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
               >
                 <Upload className="w-4 h-4" />
                 <span>Upload Images</span>

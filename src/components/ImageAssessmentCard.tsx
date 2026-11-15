@@ -354,17 +354,24 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                         evaluatedAt: new Date().toISOString(),
                       })
                     }
-                    className={`py-3 px-3 rounded-2xl border-2 border-black text-xs sm:text-sm font-black transition-all flex flex-col items-center justify-center gap-1 ${
+                    className={`group relative py-3 px-3 rounded-2xl border-2 border-black text-xs sm:text-sm font-black transition-all duration-150 flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       isSelected
                         ? option === 'Real'
-                          ? 'bg-[#86EFAC] text-black shadow-neo translate-x-0.5 translate-y-0.5'
+                          ? 'bg-[#86EFAC] text-black shadow-neo translate-x-0.5 translate-y-0.5 ring-2 ring-emerald-500/30'
                           : option === 'Synthetic'
-                          ? 'bg-[#9CDBFA] text-black shadow-neo translate-x-0.5 translate-y-0.5'
-                          : 'bg-[#FEF08A] text-black shadow-neo translate-x-0.5 translate-y-0.5'
-                        : 'bg-white text-slate-800 hover:bg-slate-50 shadow-neo-sm'
+                          ? 'bg-[#9CDBFA] text-black shadow-neo translate-x-0.5 translate-y-0.5 ring-2 ring-sky-500/30'
+                          : 'bg-[#FEF08A] text-black shadow-neo translate-x-0.5 translate-y-0.5 ring-2 ring-amber-500/30'
+                        : option === 'Real'
+                        ? 'bg-white text-slate-900 hover:bg-emerald-50 hover:border-black hover:-translate-y-0.5 hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-neo-sm'
+                        : option === 'Synthetic'
+                        ? 'bg-white text-slate-900 hover:bg-sky-50 hover:border-black hover:-translate-y-0.5 hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-neo-sm'
+                        : 'bg-white text-slate-900 hover:bg-amber-50 hover:border-black hover:-translate-y-0.5 hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-neo-sm'
                     }`}
                   >
-                    <span>{option}</span>
+                    <span className="flex items-center gap-1">
+                      {option}
+                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    </span>
                     <span className="text-[10px] font-medium text-slate-600">
                       {option === 'Real' ? 'Clinical scan' : option === 'Synthetic' ? 'Diffusion AI' : 'Inconclusive'}
                     </span>
@@ -407,10 +414,10 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                           evaluatedAt: new Date().toISOString(),
                         })
                       }
-                      className={`py-2.5 rounded-xl border-2 border-black text-sm font-black transition-all ${
+                      className={`py-2.5 rounded-xl border-2 border-black text-sm font-black transition-all duration-150 cursor-pointer ${
                         isSelected
-                          ? 'bg-[#9CDBFA] text-black shadow-neo translate-x-0.5 translate-y-0.5'
-                          : 'bg-white text-black hover:bg-slate-50 shadow-neo-sm'
+                          ? 'bg-[#9CDBFA] text-black shadow-neo translate-x-0.5 translate-y-0.5 ring-2 ring-sky-500/40'
+                          : 'bg-white text-black hover:bg-[#EBF7FD] hover:border-black hover:-translate-y-1 hover:shadow-neo hover:scale-105 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-neo-sm'
                       }`}
                     >
                       {score}
@@ -458,10 +465,10 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                           evaluatedAt: new Date().toISOString(),
                         })
                       }
-                      className={`py-2.5 rounded-xl border-2 border-black text-sm font-black transition-all ${
+                      className={`py-2.5 rounded-xl border-2 border-black text-sm font-black transition-all duration-150 cursor-pointer ${
                         isSelected
-                          ? 'bg-[#F59E0B] text-black shadow-neo translate-x-0.5 translate-y-0.5'
-                          : 'bg-white text-black hover:bg-slate-50 shadow-neo-sm'
+                          ? 'bg-[#F59E0B] text-black shadow-neo translate-x-0.5 translate-y-0.5 ring-2 ring-amber-500/40'
+                          : 'bg-white text-black hover:bg-amber-100 hover:border-black hover:-translate-y-1 hover:shadow-neo hover:scale-105 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-neo-sm'
                       }`}
                     >
                       {score}
@@ -509,10 +516,10 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                           evaluatedAt: new Date().toISOString(),
                         })
                       }
-                      className={`py-2.5 rounded-xl border-2 border-black text-sm font-black transition-all ${
+                      className={`py-2.5 rounded-xl border-2 border-black text-sm font-black transition-all duration-150 cursor-pointer ${
                         isSelected
-                          ? 'bg-[#9CDBFA] text-black shadow-neo translate-x-0.5 translate-y-0.5'
-                          : 'bg-white text-black hover:bg-slate-50 shadow-neo-sm'
+                          ? 'bg-[#9CDBFA] text-black shadow-neo translate-x-0.5 translate-y-0.5 ring-2 ring-sky-500/40'
+                          : 'bg-white text-black hover:bg-[#EBF7FD] hover:border-black hover:-translate-y-1 hover:shadow-neo hover:scale-105 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-neo-sm'
                       }`}
                     >
                       {score}
