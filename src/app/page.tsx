@@ -101,6 +101,16 @@ export default function AssessmentPage() {
       } catch (e) {
         console.warn(e);
       }
+    } else {
+      // Fallback: restore from backend file store (data/responses.json) if available
+      fetch('/api/responses')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.responses && Object.keys(data.responses).length > 0) {
+            setEvaluations(data.responses);
+          }
+        })
+        .catch((err) => console.warn('Could not restore from server API:', err));
     }
   }, []);
 

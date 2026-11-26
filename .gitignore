@@ -23,7 +23,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Local env files
+# Local Data Store
+/data/*.json
+!/data/.gitkeep
+
 .env*.local
 .env
 
