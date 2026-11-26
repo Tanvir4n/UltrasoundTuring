@@ -262,3 +262,82 @@ export function exportEvaluationsToCSV(
   link.click();
   document.body.removeChild(link);
 }
+
+export function exportEvaluationsToJSON(
+  images: UltrasoundImageItem[],
+  evaluations: Record<string, ImageEvaluationResponse>,
+  expertId: string
+): void {
+  const metrics = calculateRealtimeMetrics(images, evaluations);
+
+  const scanRecords = images
+    .filter((img) => {
+      const e = evaluations[img.id];
+      return Boolean(
+        img.imageUrl ||
+          (e &&
+            (e.q1_classification != null ||
+              e.q2_realism != null ||
+              e.q3_artifacts != null ||
+              e.q4_plausibility != null))
+      );
+    })
+    .map((img, index) => {
+      const e = evaluations[img.id] || ({} as Partial<ImageEvaluationResponse>);
+      const gt = img.groundTruth || 'Unknown';
+
+      let outcome = 'Pending';
+      if (e.q1_classification) {
+        if (e.q1_classification === 'Uncertain') {
+          outcome = 'Uncertain';
+        } else if (gt === 'Unknown') {
+          outcome = e.q1_classification;
+        } else if (e.q1_classification === gt) {
+          outcome = 'Correct';
+        } else if (gt === 'Synthetic' && e.q1_classification === 'Real') {
+          outcome = 'FOOLED';
+        } else {
+          outcome = 'Missed';
+        }
+      }
+
+      return {
+        scanNumber: img.slotNumber || index + 1,
+        imageId: img.id,
+        fileName: img.fileName || img.id,
+        groundTruth: gt,
+        q1_classification: e.q1_classification ?? null,
+        outcome,
+        q2_realism: e.q2_realism ?? null,
+        q3_artifacts: e.q3_artifacts ?? null,
+        q4_plausibility: e.q4_plausibility ?? null,
+        clinicalNotes: e.clinicalNotes || '',
+        evaluatedAt: e.evaluatedAt || null,
+      };
+    });
+
+  const payload = {
+    metadata: {
+      platform: 'UltrasoundTuring Visual Turing Test',
+      expertId: expertId || 'Anonymous',
+      exportedAt: new Date().toISOString(),
+      totalConfiguredScans: images.filter((i) => Boolean(i.imageUrl)).length,
+      totalEvaluated: metrics.totalEvaluated,
+    },
+    metricsSummary: metrics,
+    evaluations: scanRecords,
+  };
+
+  const jsonContent = JSON.stringify(payload, null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute(
+    'download',
+    `Ultrasound_Turing_Evaluation_${expertId || 'Results'}_${new Date().toISOString().split('T')[0]}.json`
+  );
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}

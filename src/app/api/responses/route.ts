@@ -160,6 +160,19 @@ export async function GET(request: Request) {
       });
     }
 
+    if (format === 'json') {
+      const jsonContent = JSON.stringify(data, null, 2);
+      const filename = `Ultrasound_Turing_Master_Responses_${new Date().toISOString().split('T')[0]}.json`;
+      return new NextResponse(jsonContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
+
     if (expertId && data.byExpert[expertId]) {
       return NextResponse.json({
         success: true,

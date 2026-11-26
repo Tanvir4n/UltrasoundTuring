@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { X, Download, BarChart3, CheckCircle2, AlertTriangle, Sparkles, HelpCircle, Layers } from 'lucide-react';
 import { UltrasoundImageItem, ImageEvaluationResponse, RealtimeMetrics } from '../types/evaluation';
-import { calculateRealtimeMetrics, exportEvaluationsToCSV } from '../utils/metrics';
+import { calculateRealtimeMetrics, exportEvaluationsToCSV, exportEvaluationsToJSON } from '../utils/metrics';
 
 interface AnalyticsDashboardModalProps {
   isOpen: boolean;
@@ -468,14 +468,22 @@ export const AnalyticsDashboardModal: React.FC<AnalyticsDashboardModalProps> = (
               className="px-4 py-2 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5"
             >
               <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Master Server CSV</span>
+              <span>Master CSV</span>
             </a>
+            <button
+              type="button"
+              onClick={() => exportEvaluationsToJSON(images, evaluations, expertId)}
+              className="px-4 py-2 rounded-full text-xs font-black bg-[#FEF08A] hover:bg-[#FDE047] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Session JSON</span>
+            </button>
             <button
               type="button"
               onClick={() => exportEvaluationsToCSV(images, evaluations, expertId)}
               className="px-5 py-2 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all"
             >
-              Download Session CSV
+              Session CSV
             </button>
             <button
               type="button"

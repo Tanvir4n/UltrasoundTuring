@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   Upload, 
   Download, 
@@ -8,6 +8,7 @@ import {
   Trash2, 
   HelpCircle,
   FileSpreadsheet,
+  FileJson,
   CheckCircle,
   Sparkles,
   ArrowRight,
@@ -26,6 +27,7 @@ interface HeaderHeroProps {
   onRefreshFolder: () => void;
   onClearImages: () => void;
   onExportCSV: () => void;
+  onExportJSON?: () => void;
   onScrollToSlots: () => void;
   onOpenAnalytics?: () => void;
   onOpenGroundTruthManager?: () => void;
@@ -40,11 +42,13 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
   onRefreshFolder,
   onClearImages,
   onExportCSV,
+  onExportJSON,
   onScrollToSlots,
   onOpenAnalytics,
   onOpenGroundTruthManager,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -150,14 +154,73 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
             Upload Scans
           </button>
 
-          <button
-            type="button"
-            onClick={onExportCSV}
-            className="px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-white hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
-          >
-            <span>Download</span>
-            <span className="text-[10px]">▼</span>
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setDownloadMenuOpen((prev) => !prev)}
+              className="px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-white hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 flex items-center gap-1 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+            >
+              <span>Download</span>
+              <span className="text-[10px]">▼</span>
+            </button>
+
+            {downloadMenuOpen && (
+              <div
+                onMouseLeave={() => setDownloadMenuOpen(false)}
+                className="absolute right-0 mt-2 w-60 bg-white border-2 border-black rounded-2xl shadow-neo-md z-50 overflow-hidden py-1.5"
+              >
+                <div className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                  Local Session File
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDownloadMenuOpen(false);
+                    onExportCSV();
+                  }}
+                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-black hover:bg-[#84CC16]/30 flex items-center gap-2 transition"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Save Session CSV (.csv)</span>
+                </button>
+                {onExportJSON && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDownloadMenuOpen(false);
+                      onExportJSON();
+                    }}
+                    className="w-full px-3.5 py-2 text-left text-xs font-bold text-black hover:bg-[#FEF08A]/50 flex items-center gap-2 transition"
+                  >
+                    <FileJson className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Save Session JSON (.json)</span>
+                  </button>
+                )}
+
+                <div className="px-3.5 py-1.5 mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400 border-t border-b border-slate-100">
+                  Master Server Storage
+                </div>
+                <a
+                  href="/api/responses?format=csv"
+                  download
+                  onClick={() => setDownloadMenuOpen(false)}
+                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-black hover:bg-[#9CDBFA]/40 flex items-center gap-2 transition"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#0284c7]" />
+                  <span>Master Server CSV (.csv)</span>
+                </a>
+                <a
+                  href="/api/responses?format=json"
+                  download
+                  onClick={() => setDownloadMenuOpen(false)}
+                  className="w-full px-3.5 py-2 text-left text-xs font-bold text-black hover:bg-[#9CDBFA]/40 flex items-center gap-2 transition"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#0284c7]" />
+                  <span>Master Server JSON (.json)</span>
+                </a>
+              </div>
+            )}
+          </div>
         </div>
 
       </nav>

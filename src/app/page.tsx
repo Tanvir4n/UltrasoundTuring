@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UltrasoundImageItem, ImageEvaluationResponse, GroundTruthType } from '../types/evaluation';
-import { exportEvaluationsToCSV } from '../utils/metrics';
+import { exportEvaluationsToCSV, exportEvaluationsToJSON } from '../utils/metrics';
 
 import { HeaderHero } from '../components/HeaderHero';
 import { ImageAssessmentCard } from '../components/ImageAssessmentCard';
@@ -278,6 +278,11 @@ export default function AssessmentPage() {
     exportEvaluationsToCSV(images, evaluations, expertId);
   };
 
+  // Export full JSON with ground truth & summary metrics
+  const handleExportJSON = () => {
+    exportEvaluationsToJSON(images, evaluations, expertId);
+  };
+
   // Scroll to slots section
   const handleScrollToSlots = () => {
     slotsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -307,6 +312,7 @@ export default function AssessmentPage() {
         onRefreshFolder={fetchFolderImages}
         onClearImages={handleClearImages}
         onExportCSV={handleExportCSV}
+        onExportJSON={handleExportJSON}
         onScrollToSlots={handleScrollToSlots}
         onOpenAnalytics={() => setIsAnalyticsOpen(true)}
         onOpenGroundTruthManager={() => setIsGroundTruthOpen(true)}
@@ -379,6 +385,15 @@ export default function AssessmentPage() {
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportJSON}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[#FEF08A] hover:bg-[#FDE047] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export JSON</span>
             </button>
           </div>
 
