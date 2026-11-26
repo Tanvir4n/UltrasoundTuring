@@ -458,16 +458,24 @@ export const AnalyticsDashboardModal: React.FC<AnalyticsDashboardModalProps> = (
         {/* Footer */}
         <div className="bg-[#FAF9F6] border-t-2 border-black px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-slate-600 font-medium">
-            Provisional live results automatically recalculated on each response submission.
+            Provisional live results auto-saved to <code className="bg-slate-200 px-1.5 py-0.5 rounded font-mono text-black font-bold">data/responses.csv</code> &amp; <code className="bg-slate-200 px-1.5 py-0.5 rounded font-mono text-black font-bold">data/responses.json</code>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/api/responses?format=csv"
+              download
+              className="px-4 py-2 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Master Server CSV</span>
+            </a>
             <button
               type="button"
               onClick={() => exportEvaluationsToCSV(images, evaluations, expertId)}
               className="px-5 py-2 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all"
             >
-              Download Comprehensive CSV
+              Download Session CSV
             </button>
             <button
               type="button"

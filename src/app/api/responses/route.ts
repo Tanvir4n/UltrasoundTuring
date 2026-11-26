@@ -1,46 +1,142 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { ImageEvaluationResponse } from '@/types/evaluation';
+import { ImageEvaluationResponse, GroundTruthType } from '@/types/evaluation';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
-const RESPONSES_FILE = path.join(DATA_DIR, 'responses.json');
+const RESPONSES_JSON_FILE = path.join(DATA_DIR, 'responses.json');
+const RESPONSES_CSV_FILE = path.join(DATA_DIR, 'responses.csv');
+
+interface StoredEvaluationEntry extends ImageEvaluationResponse {
+  slotNumber?: number;
+  fileName?: string;
+  groundTruth?: GroundTruthType;
+}
 
 interface StoredData {
   lastUpdated: string;
-  byExpert: Record<string, Record<string, ImageEvaluationResponse>>;
-  latestResponses: Record<string, ImageEvaluationResponse>;
+  groundTruthMap: Record<string, GroundTruthType>;
+  byExpert: Record<string, Record<string, StoredEvaluationEntry>>;
+  latestResponses: Record<string, StoredEvaluationEntry>;
 }
 
-// Helper to safely load data from disk
+function ensureDataDir(): void {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
 function loadStoredData(): StoredData {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (fs.existsSync(RESPONSES_FILE)) {
-      const content = fs.readFileSync(RESPONSES_FILE, 'utf-8');
-      return JSON.parse(content);
+    ensureDataDir();
+    if (fs.existsSync(RESPONSES_JSON_FILE)) {
+      const content = fs.readFileSync(RESPONSES_JSON_FILE, 'utf-8');
+      const parsed = JSON.parse(content);
+      return {
+        lastUpdated: parsed.lastUpdated || new Date().toISOString(),
+        groundTruthMap: parsed.groundTruthMap || {},
+        byExpert: parsed.byExpert || {},
+        latestResponses: parsed.latestResponses || {},
+      };
     }
   } catch (err) {
     console.error('Error reading responses.json:', err);
   }
   return {
     lastUpdated: new Date().toISOString(),
+    groundTruthMap: {},
     byExpert: {},
     latestResponses: {},
   };
 }
 
-// Helper to save data to disk
+function escapeCsvCell(val: unknown): string {
+  const str = String(val ?? '');
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function generateCsvContent(data: StoredData): string {
+  const headers = [
+    'Expert_ID',
+    'Slot_Number',
+    'Image_ID',
+    'File_Name',
+    'Ground_Truth',
+    'Q1_Classification',
+    'Evaluation_Outcome',
+    'Q2_Anatomical_Realism_1to5',
+    'Q3_Image_Artifacts_1to5',
+    'Q4_Clinical_Plausibility_1to5',
+    'Clinical_Notes',
+    'Evaluated_At',
+  ];
+
+  const rows: string[] = [headers.join(',')];
+
+  const experts = Object.keys(data.byExpert).sort();
+  for (const expertId of experts) {
+    const expertResponses = data.byExpert[expertId] || {};
+    const entries = Object.values(expertResponses).sort((a, b) => {
+      if (a.slotNumber != null && b.slotNumber != null) {
+        return a.slotNumber - b.slotNumber;
+      }
+      return (a.imageId || '').localeCompare(b.imageId || '');
+    });
+
+    for (const entry of entries) {
+      const gt: GroundTruthType =
+        data.groundTruthMap[entry.imageId] || entry.groundTruth || 'Unknown';
+      const q1 = entry.q1_classification;
+
+      let outcome = 'Pending';
+      if (q1) {
+        if (q1 === 'Uncertain') {
+          outcome = 'Uncertain';
+        } else if (gt === 'Unknown') {
+          outcome = q1;
+        } else if (q1 === gt) {
+          outcome = 'Correct';
+        } else if (gt === 'Synthetic' && q1 === 'Real') {
+          outcome = 'FOOLED (Synthetic labelled Real)';
+        } else {
+          outcome = 'Missed';
+        }
+      }
+
+      rows.push(
+        [
+          escapeCsvCell(expertId),
+          escapeCsvCell(entry.slotNumber ?? ''),
+          escapeCsvCell(entry.imageId),
+          escapeCsvCell(entry.fileName || entry.imageId),
+          escapeCsvCell(gt),
+          escapeCsvCell(q1 || 'Not Rated'),
+          escapeCsvCell(outcome),
+          escapeCsvCell(entry.q2_realism ?? ''),
+          escapeCsvCell(entry.q3_artifacts ?? ''),
+          escapeCsvCell(entry.q4_plausibility ?? ''),
+          escapeCsvCell(entry.clinicalNotes || ''),
+          escapeCsvCell(entry.evaluatedAt || ''),
+        ].join(',')
+      );
+    }
+  }
+
+  // Add UTF-8 BOM for seamless Excel compatibility
+  return '\uFEFF' + rows.join('\n');
+}
+
 function saveStoredData(data: StoredData): void {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(RESPONSES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    ensureDataDir();
+    fs.writeFileSync(RESPONSES_JSON_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    const csvContent = generateCsvContent(data);
+    fs.writeFileSync(RESPONSES_CSV_FILE, csvContent, 'utf-8');
   } catch (err) {
-    console.error('Error saving responses.json to disk:', err);
+    console.error('Error saving responses to disk:', err);
   }
 }
 
@@ -49,6 +145,20 @@ export async function GET(request: Request) {
     const data = loadStoredData();
     const { searchParams } = new URL(request.url);
     const expertId = searchParams.get('expertId');
+    const format = searchParams.get('format');
+
+    if (format === 'csv') {
+      const csvContent = generateCsvContent(data);
+      const filename = `Ultrasound_Turing_Master_Responses_${new Date().toISOString().split('T')[0]}.csv`;
+      return new NextResponse(csvContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
 
     if (expertId && data.byExpert[expertId]) {
       return NextResponse.json({
@@ -64,6 +174,8 @@ export async function GET(request: Request) {
       responses: data.latestResponses,
       byExpert: data.byExpert,
       lastUpdated: data.lastUpdated,
+      csvFilePath: 'data/responses.csv',
+      jsonFilePath: 'data/responses.json',
     });
   } catch (error) {
     console.error('GET /api/responses error:', error);
@@ -74,12 +186,20 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { imageId, evaluation, allEvaluations, expertId } = body;
-    const currentExpert = (expertId || 'Anonymous').trim();
+    const { imageId, evaluation, allEvaluations, expertId, imageMeta, groundTruthMap } = body;
+    const currentExpert = (expertId || 'Anonymous').trim() || 'Anonymous';
 
     const stored = loadStoredData();
     if (!stored.byExpert[currentExpert]) {
       stored.byExpert[currentExpert] = {};
+    }
+
+    // Update ground truth mapping if provided
+    if (groundTruthMap && typeof groundTruthMap === 'object') {
+      stored.groundTruthMap = {
+        ...stored.groundTruthMap,
+        ...groundTruthMap,
+      };
     }
 
     if (allEvaluations && typeof allEvaluations === 'object') {
@@ -92,11 +212,15 @@ export async function POST(request: Request) {
         ...allEvaluations,
       };
     } else if (imageId && evaluation) {
-      const evalEntry: ImageEvaluationResponse = {
+      const evalEntry: StoredEvaluationEntry = {
         ...(stored.byExpert[currentExpert][imageId] || {}),
         ...evaluation,
+        ...(imageMeta || {}),
         evaluatedAt: new Date().toISOString(),
       };
+      if (imageMeta?.groundTruth) {
+        stored.groundTruthMap[imageId] = imageMeta.groundTruth;
+      }
       stored.byExpert[currentExpert][imageId] = evalEntry;
       stored.latestResponses[imageId] = evalEntry;
     }
@@ -108,7 +232,8 @@ export async function POST(request: Request) {
       success: true,
       savedAt: stored.lastUpdated,
       expertId: currentExpert,
-      filePath: 'data/responses.json',
+      jsonPath: 'data/responses.json',
+      csvPath: 'data/responses.csv',
       totalSaved: Object.keys(stored.byExpert[currentExpert]).length,
     });
   } catch (error) {

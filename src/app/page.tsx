@@ -237,7 +237,10 @@ export default function AssessmentPage() {
         console.warn('Local storage write failed');
       }
 
-      // Background autosave to API
+      // Find image metadata to include slot/filename/ground truth in server CSV
+      const targetImage = images.find((img) => img.id === imageId);
+
+      // Background autosave to API (writes both data/responses.json and data/responses.csv)
       fetch('/api/responses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -245,6 +248,13 @@ export default function AssessmentPage() {
           expertId,
           imageId,
           evaluation: updatedEvaluation,
+          imageMeta: targetImage
+            ? {
+                slotNumber: targetImage.slotNumber,
+                fileName: targetImage.fileName,
+                groundTruth: targetImage.groundTruth || 'Unknown',
+              }
+            : undefined,
         }),
       }).catch((err) => console.warn('Background sync error (working offline):', err));
 
@@ -485,6 +495,18 @@ export default function AssessmentPage() {
           } catch (e) {
             console.warn(e);
           }
+          // Sync ground truth map to server so data/responses.csv stays accurate
+          const groundTruthMap: Record<string, GroundTruthType> = {};
+          updated.forEach((img) => {
+            if (img.groundTruth && img.groundTruth !== 'Unknown') {
+              groundTruthMap[img.id] = img.groundTruth;
+            }
+          });
+          fetch('/api/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ expertId, groundTruthMap }),
+          }).catch(() => {});
         }}
         onBulkUpload={handleUploadFiles}
       />

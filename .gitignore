@@ -25,6 +25,7 @@ yarn-error.log*
 
 # Local Data Store
 /data/*.json
+/data/*.csv
 !/data/.gitkeep
 
 .env*.local
