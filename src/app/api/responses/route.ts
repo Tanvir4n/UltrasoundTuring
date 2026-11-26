@@ -42,12 +42,14 @@ function loadStoredData(): StoredData {
   } catch (err) {
     console.error('Error reading responses.json:', err);
   }
-  return {
+  const emptyData: StoredData = {
     lastUpdated: new Date().toISOString(),
     groundTruthMap: {},
     byExpert: {},
     latestResponses: {},
   };
+  saveStoredData(emptyData);
+  return emptyData;
 }
 
 function escapeCsvCell(val: unknown): string {

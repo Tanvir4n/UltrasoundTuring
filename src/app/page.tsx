@@ -97,7 +97,19 @@ export default function AssessmentPage() {
     const savedEvals = localStorage.getItem('ous_evaluations');
     if (savedEvals) {
       try {
-        setEvaluations(JSON.parse(savedEvals));
+        const parsedEvals = JSON.parse(savedEvals);
+        setEvaluations(parsedEvals);
+        // Sync existing localStorage responses to server files (data/responses.json & data/responses.csv)
+        if (parsedEvals && Object.keys(parsedEvals).length > 0) {
+          fetch('/api/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              expertId: savedExpert || 'Anonymous',
+              allEvaluations: parsedEvals,
+            }),
+          }).catch(() => {});
+        }
       } catch (e) {
         console.warn(e);
       }
