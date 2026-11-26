@@ -12,7 +12,9 @@ import {
   Sparkles,
   ArrowRight,
   Activity,
-  Layers
+  Layers,
+  BarChart3,
+  ShieldCheck
 } from 'lucide-react';
 
 interface HeaderHeroProps {
@@ -25,6 +27,8 @@ interface HeaderHeroProps {
   onClearImages: () => void;
   onExportCSV: () => void;
   onScrollToSlots: () => void;
+  onOpenAnalytics?: () => void;
+  onOpenGroundTruthManager?: () => void;
 }
 
 export const HeaderHero: React.FC<HeaderHeroProps> = ({
@@ -37,6 +41,8 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
   onClearImages,
   onExportCSV,
   onScrollToSlots,
+  onOpenAnalytics,
+  onOpenGroundTruthManager,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +89,16 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
           >
             Folder Sync
           </button>
+          {onOpenAnalytics && (
+            <button
+              type="button"
+              onClick={onOpenAnalytics}
+              className="hover:text-[#0284c7] transition flex items-center gap-1 text-black font-black"
+            >
+              <BarChart3 className="w-4 h-4 stroke-[2.5] text-[#84CC16]" />
+              <span>Live Analytics</span>
+            </button>
+          )}
           <button 
             type="button" 
             onClick={onExportCSV} 
@@ -102,6 +118,29 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
             onChange={handleFileChange}
             className="hidden"
           />
+
+          {onOpenGroundTruthManager && (
+            <button
+              type="button"
+              onClick={onOpenGroundTruthManager}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black bg-white hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+              title="Configure Ground Truth (Real vs Synthetic) labels"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Ground Truth</span>
+            </button>
+          )}
+
+          {onOpenAnalytics && (
+            <button
+              type="button"
+              onClick={onOpenAnalytics}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+            >
+              <BarChart3 className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Analytics</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -161,6 +200,17 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
                 <span>Start Assessment</span>
                 <ArrowRight className="w-4 h-4 stroke-[2.5]" />
               </button>
+
+              {onOpenAnalytics && (
+                <button
+                  type="button"
+                  onClick={onOpenAnalytics}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-black bg-[#84CC16] hover:bg-[#65a30d] hover:-translate-y-0.5 hover:shadow-neo-md text-black border-2 border-black shadow-neo transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                >
+                  <BarChart3 className="w-4 h-4 stroke-[2.5]" />
+                  <span>Live Analytics</span>
+                </button>
+              )}
 
               <button
                 type="button"

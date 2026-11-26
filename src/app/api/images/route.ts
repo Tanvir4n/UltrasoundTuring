@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { GroundTruthType } from '@/types/evaluation';
 
 export async function GET() {
   try {
@@ -18,11 +19,27 @@ export async function GET() {
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
       .map((file, index) => {
         const id = path.parse(file).name;
+        const lower = file.toLowerCase();
+
+        let groundTruth: GroundTruthType = 'Unknown';
+        if (lower.includes('real') || lower.includes('orig') || lower.includes('clinical')) {
+          groundTruth = 'Real';
+        } else if (
+          lower.includes('syn') ||
+          lower.includes('fake') ||
+          lower.includes('diff') ||
+          lower.includes('gen') ||
+          lower.includes('ai')
+        ) {
+          groundTruth = 'Synthetic';
+        }
+
         return {
           id: id || `IMG-${String(index + 1).padStart(3, '0')}`,
           fileName: file,
           imageUrl: `/images/${file}`,
           slotNumber: (index % 10) + 1,
+          groundTruth,
         };
       });
 
@@ -32,4 +49,3 @@ export async function GET() {
     return NextResponse.json({ images: [] }, { status: 500 });
   }
 }
-

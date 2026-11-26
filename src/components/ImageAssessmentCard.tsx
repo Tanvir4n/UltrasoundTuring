@@ -124,6 +124,13 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
             <span>Change Scan</span>
           </button>
 
+          {evaluation?.evaluatedAt && (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Autosaved</span>
+            </span>
+          )}
+
           {isComplete ? (
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-[#84CC16] text-black border-2 border-black shadow-neo-sm">
               <Check className="w-3.5 h-3.5 stroke-[3]" />

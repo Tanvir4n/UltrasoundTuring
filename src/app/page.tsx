@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { UltrasoundImageItem, ImageEvaluationResponse } from '../types/evaluation';
+import { UltrasoundImageItem, ImageEvaluationResponse, GroundTruthType } from '../types/evaluation';
 import { exportEvaluationsToCSV } from '../utils/metrics';
 
 import { HeaderHero } from '../components/HeaderHero';
 import { ImageAssessmentCard } from '../components/ImageAssessmentCard';
 import { PageNavigation } from '../components/PageNavigation';
 import { ImageLightboxModal } from '../components/ImageLightboxModal';
+import { AnalyticsDashboardModal } from '../components/AnalyticsDashboardModal';
+import { GroundTruthManagerModal } from '../components/GroundTruthManagerModal';
 
-import { Upload, ChevronRight, ChevronLeft, Download, Layers } from 'lucide-react';
+import { Upload, ChevronRight, ChevronLeft, Download, BarChart3, ShieldCheck } from 'lucide-react';
 
 const DEFAULT_TOTAL_SLOTS = 100; // Exactly 10 pages of 10 slots each = 100 slots
 
@@ -25,6 +27,7 @@ const padSlotsToMinimum = (items: UltrasoundImageItem[]): UltrasoundImageItem[] 
       id: `SCAN-${String(globalIdx).padStart(3, '0')}`,
       imageUrl: '',
       slotNumber: ((globalIdx - 1) % 10) + 1,
+      groundTruth: 'Unknown',
     };
   });
   return [...items, ...padding];
@@ -38,6 +41,8 @@ export default function AssessmentPage() {
 
   const [evaluations, setEvaluations] = useState<Record<string, ImageEvaluationResponse>>({});
   const [lightboxImage, setLightboxImage] = useState<UltrasoundImageItem | null>(null);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState<boolean>(false);
+  const [isGroundTruthOpen, setIsGroundTruthOpen] = useState<boolean>(false);
 
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const slotsSectionRef = useRef<HTMLDivElement>(null);
@@ -48,6 +53,7 @@ export default function AssessmentPage() {
       id: `SCAN-${String(idx + 1).padStart(3, '0')}`,
       imageUrl: '',
       slotNumber: (idx % 10) + 1,
+      groundTruth: 'Unknown',
     }));
     setImages(slots);
   };
@@ -98,7 +104,7 @@ export default function AssessmentPage() {
     }
   }, []);
 
-  // Sync state to LocalStorage
+  // Sync state to LocalStorage & Backend API
   useEffect(() => {
     if (expertId) localStorage.setItem('ous_expert_id', expertId);
     if (Object.keys(evaluations).length > 0) {
@@ -118,22 +124,37 @@ export default function AssessmentPage() {
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
         const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        const lower = file.name.toLowerCase();
+
+        let groundTruth: GroundTruthType = 'Unknown';
+        if (lower.includes('real') || lower.includes('orig') || lower.includes('clinical')) {
+          groundTruth = 'Real';
+        } else if (
+          lower.includes('syn') ||
+          lower.includes('fake') ||
+          lower.includes('diff') ||
+          lower.includes('gen') ||
+          lower.includes('ai')
+        ) {
+          groundTruth = 'Synthetic';
+        }
 
         newItems.push({
           id: baseName || `SCAN-${String(index + 1).padStart(3, '0')}`,
           fileName: file.name,
           imageUrl: dataUrl,
           slotNumber: (index % 10) + 1,
+          groundTruth,
         });
 
         if (newItems.length === files.length) {
           newItems.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' }));
-          
+
           // Pad to ensure at least 100 slots (10 pages)
           const allSlots = padSlotsToMinimum(newItems);
           setImages(allSlots);
           setCurrentPage(1);
-          
+
           try {
             localStorage.setItem('ous_custom_images', JSON.stringify(allSlots));
           } catch (e) {
@@ -151,19 +172,33 @@ export default function AssessmentPage() {
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      const lower = file.name.toLowerCase();
 
-      setImages((prev) =>
-        prev.map((img) =>
+      let groundTruth: GroundTruthType = 'Unknown';
+      if (lower.includes('real') || lower.includes('orig') || lower.includes('clinical')) {
+        groundTruth = 'Real';
+      } else if (lower.includes('syn') || lower.includes('fake') || lower.includes('diff') || lower.includes('gen')) {
+        groundTruth = 'Synthetic';
+      }
+
+      setImages((prev) => {
+        const updated = prev.map((img) =>
           img.id === imageId
-            ? { ...img, id: baseName, fileName: file.name, imageUrl: dataUrl }
+            ? { ...img, id: baseName, fileName: file.name, imageUrl: dataUrl, groundTruth }
             : img
-        )
-      );
+        );
+        try {
+          localStorage.setItem('ous_custom_images', JSON.stringify(updated));
+        } catch (e) {
+          console.warn('Storage full');
+        }
+        return updated;
+      });
     };
     reader.readAsDataURL(file);
   };
 
-  // Handle rating changes
+  // Real-time Autosave & Rating changes
   const handleUpdateEvaluation = (imageId: string, update: Partial<ImageEvaluationResponse>) => {
     setEvaluations((prev) => {
       const current = prev[imageId] || {
@@ -174,13 +209,36 @@ export default function AssessmentPage() {
         q4_plausibility: null,
       };
 
-      return {
-        ...prev,
-        [imageId]: {
-          ...current,
-          ...update,
-        },
+      const updatedEvaluation: ImageEvaluationResponse = {
+        ...current,
+        ...update,
+        evaluatedAt: new Date().toISOString(),
       };
+
+      const nextState = {
+        ...prev,
+        [imageId]: updatedEvaluation,
+      };
+
+      // Autosave to localStorage immediately
+      try {
+        localStorage.setItem('ous_evaluations', JSON.stringify(nextState));
+      } catch (e) {
+        console.warn('Local storage write failed');
+      }
+
+      // Background autosave to API
+      fetch('/api/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          expertId,
+          imageId,
+          evaluation: updatedEvaluation,
+        }),
+      }).catch((err) => console.warn('Background sync error (working offline):', err));
+
+      return nextState;
     });
   };
 
@@ -195,7 +253,7 @@ export default function AssessmentPage() {
     }
   };
 
-  // Export to CSV
+  // Export full CSV with ground truth outcomes
   const handleExportCSV = () => {
     exportEvaluationsToCSV(images, evaluations, expertId);
   };
@@ -230,6 +288,8 @@ export default function AssessmentPage() {
         onClearImages={handleClearImages}
         onExportCSV={handleExportCSV}
         onScrollToSlots={handleScrollToSlots}
+        onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+        onOpenGroundTruthManager={() => setIsGroundTruthOpen(true)}
       />
 
       {/* 2. 10-SLOT BATCH HEADER */}
@@ -256,6 +316,25 @@ export default function AssessmentPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsAnalyticsOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+            >
+              <BarChart3 className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Live Analytics</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsGroundTruthOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black bg-white hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+              title="Add images or configure Real vs Synthetic ground truth"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Manage Ground Truth</span>
+            </button>
+
             <input
               ref={bulkFileInputRef}
               type="file"
@@ -369,6 +448,35 @@ export default function AssessmentPage() {
       <ImageLightboxModal
         image={lightboxImage}
         onClose={() => setLightboxImage(null)}
+      />
+
+      {/* 6. REAL-TIME ANALYTICS DASHBOARD MODAL */}
+      <AnalyticsDashboardModal
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
+        images={images}
+        evaluations={evaluations}
+        expertId={expertId}
+        onOpenGroundTruthManager={() => {
+          setIsAnalyticsOpen(false);
+          setIsGroundTruthOpen(true);
+        }}
+      />
+
+      {/* 7. SCAN MANAGER & GROUND TRUTH SETUP MODAL */}
+      <GroundTruthManagerModal
+        isOpen={isGroundTruthOpen}
+        onClose={() => setIsGroundTruthOpen(false)}
+        images={images}
+        onUpdateImages={(updated) => {
+          setImages(updated);
+          try {
+            localStorage.setItem('ous_custom_images', JSON.stringify(updated));
+          } catch (e) {
+            console.warn(e);
+          }
+        }}
+        onBulkUpload={handleUploadFiles}
       />
 
     </div>
