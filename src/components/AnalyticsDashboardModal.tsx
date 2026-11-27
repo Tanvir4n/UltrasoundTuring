@@ -27,6 +27,7 @@ import {
   exportEvaluationsToJSON,
   generateLaTeXTables,
 } from '../utils/metrics';
+import { exportFullReportToPDF, exportFullReportToWord } from '../utils/reportExport';
 import { calculateExpertBreakdown, calculateInterRaterMetrics } from '../utils/statistics';
 
 interface AnalyticsDashboardModalProps {
@@ -35,6 +36,7 @@ interface AnalyticsDashboardModalProps {
   images: UltrasoundImageItem[];
   evaluations: Record<string, ImageEvaluationResponse>;
   expertId: string;
+  experienceTier?: string;
   onOpenGroundTruthManager: () => void;
 }
 
@@ -46,6 +48,7 @@ export const AnalyticsDashboardModal: React.FC<AnalyticsDashboardModalProps> = (
   images,
   evaluations,
   expertId,
+  experienceTier,
   onOpenGroundTruthManager,
 }) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
@@ -987,33 +990,47 @@ export const AnalyticsDashboardModal: React.FC<AnalyticsDashboardModalProps> = (
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => exportFullReportToPDF(images, evaluations, expertId, experienceTier, mergedByExpert)}
+              className="px-4 py-2 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Full Report PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => exportFullReportToWord(images, evaluations, expertId, experienceTier, mergedByExpert)}
+              className="px-4 py-2 rounded-full text-xs font-black bg-white hover:bg-slate-100 text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Word (.doc)</span>
+            </button>
             <a
               href="/api/responses?format=csv"
               download
-              className="px-4 py-2 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-full text-xs font-black bg-[#FAF9F6] hover:bg-slate-100 text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5"
             >
-              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Master CSV</span>
             </a>
             <button
               type="button"
               onClick={() => exportEvaluationsToJSON(images, evaluations, expertId)}
-              className="px-4 py-2 rounded-full text-xs font-black bg-[#FEF08A] hover:bg-[#FDE047] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-full text-xs font-black bg-[#FEF08A] hover:bg-[#FDE047] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Session JSON</span>
+              <span>JSON</span>
             </button>
             <button
               type="button"
               onClick={() => exportEvaluationsToCSV(images, evaluations, expertId)}
-              className="px-5 py-2 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all"
+              className="px-4 py-2 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all cursor-pointer"
             >
               Session CSV
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 rounded-full text-xs font-black bg-white hover:bg-slate-100 text-black border-2 border-black shadow-neo-sm transition-all"
+              className="px-4 py-2 rounded-full text-xs font-black bg-white hover:bg-slate-100 text-black border-2 border-black shadow-neo-sm transition-all cursor-pointer"
             >
               Close
             </button>

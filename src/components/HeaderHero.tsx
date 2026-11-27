@@ -9,6 +9,7 @@ import {
   HelpCircle,
   FileSpreadsheet,
   FileJson,
+  FileText,
   CheckCircle,
   Sparkles,
   ArrowRight,
@@ -30,6 +31,8 @@ interface HeaderHeroProps {
   onClearImages: () => void;
   onExportCSV: () => void;
   onExportJSON?: () => void;
+  onExportPDF?: () => void;
+  onExportWord?: () => void;
   onScrollToSlots: () => void;
   onOpenAnalytics?: () => void;
   onOpenGroundTruthManager?: () => void;
@@ -47,6 +50,8 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
   onClearImages,
   onExportCSV,
   onExportJSON,
+  onExportPDF,
+  onExportWord,
   onScrollToSlots,
   onOpenAnalytics,
   onOpenGroundTruthManager,
@@ -171,10 +176,40 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
             {downloadMenuOpen && (
               <div
                 onMouseLeave={() => setDownloadMenuOpen(false)}
-                className="absolute right-0 mt-2 w-60 bg-white border-2 border-black rounded-2xl shadow-neo-md z-50 overflow-hidden py-1.5"
+                className="absolute right-0 mt-2 w-64 bg-white border-2 border-black rounded-2xl shadow-neo-md z-50 overflow-hidden py-1.5"
               >
                 <div className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                  Local Session File
+                  Complete Publication Report
+                </div>
+                {onExportPDF && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDownloadMenuOpen(false);
+                      onExportPDF();
+                    }}
+                    className="w-full px-3.5 py-2 text-left text-xs font-black text-black hover:bg-[#9CDBFA]/50 flex items-center gap-2 transition"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Full Report PDF (.pdf)</span>
+                  </button>
+                )}
+                {onExportWord && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDownloadMenuOpen(false);
+                      onExportWord();
+                    }}
+                    className="w-full px-3.5 py-2 text-left text-xs font-black text-black hover:bg-[#9CDBFA]/40 flex items-center gap-2 transition"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-blue-700" />
+                    <span>Word / Google Docs (.doc)</span>
+                  </button>
+                )}
+
+                <div className="px-3.5 py-1.5 mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400 border-t border-b border-slate-100">
+                  Local Session Data
                 </div>
                 <button
                   type="button"

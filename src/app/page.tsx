@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UltrasoundImageItem, ImageEvaluationResponse, GroundTruthType, ExpertExperienceTier } from '../types/evaluation';
 import { exportEvaluationsToCSV, exportEvaluationsToJSON, calculateRealtimeMetrics } from '../utils/metrics';
+import { exportFullReportToPDF, exportFullReportToWord } from '../utils/reportExport';
 
 import { HeaderHero } from '../components/HeaderHero';
 import { ImageAssessmentCard } from '../components/ImageAssessmentCard';
@@ -303,6 +304,28 @@ export default function AssessmentPage() {
     exportEvaluationsToJSON(images, evaluations, expertId);
   };
 
+  // Export publication-grade PDF report (fetches multi-reader snapshot if available)
+  const handleExportPDF = async () => {
+    let byExpert = undefined;
+    try {
+      const res = await fetch('/api/responses');
+      const data = await res.json();
+      if (data?.byExpert) byExpert = data.byExpert;
+    } catch {}
+    exportFullReportToPDF(images, evaluations, expertId, experienceTier, byExpert);
+  };
+
+  // Export editable Microsoft Word / Google Docs (.doc) report
+  const handleExportWord = async () => {
+    let byExpert = undefined;
+    try {
+      const res = await fetch('/api/responses');
+      const data = await res.json();
+      if (data?.byExpert) byExpert = data.byExpert;
+    } catch {}
+    exportFullReportToWord(images, evaluations, expertId, experienceTier, byExpert);
+  };
+
   // Scroll to slots section
   const handleScrollToSlots = () => {
     slotsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -370,6 +393,8 @@ export default function AssessmentPage() {
         onClearImages={handleClearImages}
         onExportCSV={handleExportCSV}
         onExportJSON={handleExportJSON}
+        onExportPDF={handleExportPDF}
+        onExportWord={handleExportWord}
         onScrollToSlots={handleScrollToSlots}
         onOpenAnalytics={() => setIsAnalyticsOpen(true)}
         onOpenGroundTruthManager={() => setIsGroundTruthOpen(true)}
@@ -452,6 +477,26 @@ export default function AssessmentPage() {
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Add Images</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-[#9CDBFA] hover:bg-[#82CDF6] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+              title="Download all results, statistical tests, and log in one PDF"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export PDF</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportWord}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-white hover:bg-slate-100 hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+              title="Download editable report for Microsoft Word / Google Docs"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Docs (.doc)</span>
             </button>
 
             <button
@@ -631,6 +676,7 @@ export default function AssessmentPage() {
         images={images}
         evaluations={evaluations}
         expertId={expertId}
+        experienceTier={experienceTier}
         onOpenGroundTruthManager={() => {
           setIsAnalyticsOpen(false);
           setIsGroundTruthOpen(true);
