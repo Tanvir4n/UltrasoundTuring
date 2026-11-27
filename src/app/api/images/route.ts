@@ -21,6 +21,7 @@ export async function GET() {
             : `/api/scan/${encodeURIComponent(scan.id)}?v=${encodeURIComponent(manifest.generatedAt)}`,
           slotNumber: scan.slotNumber,
           groundTruth: scan.groundTruth,
+          morphology: scan.morphology,
         };
       });
 
@@ -104,6 +105,7 @@ export async function POST() {
         : `/api/scan/${encodeURIComponent(scan.id)}?v=${encodeURIComponent(manifest.generatedAt)}`,
       slotNumber: scan.slotNumber,
       groundTruth: scan.groundTruth,
+      morphology: scan.morphology,
     }));
 
     return NextResponse.json({

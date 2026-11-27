@@ -1,17 +1,20 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   UltrasoundImageItem, 
   ImageEvaluationResponse, 
-  ClassificationResponse 
+  ClassificationResponse,
+  ARTIFACT_TAXONOMY_TAGS
 } from '../types/evaluation';
 import { 
   Maximize2, 
   Check, 
   Upload, 
   FileImage,
-  MessageSquare
+  MessageSquare,
+  Clock,
+  Tag
 } from 'lucide-react';
 
 interface ImageAssessmentCardProps {
@@ -34,8 +37,59 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
   onOpenLightbox,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const activeMsRef = useRef<number>(evaluation?.decisionTimeMs || 0);
+  const visibleSinceRef = useRef<number | null>(null);
   const [isInverted, setIsInverted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Track active viewing latency while card is visible in viewport
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          visibleSinceRef.current = Date.now();
+        } else if (visibleSinceRef.current != null) {
+          const delta = Math.min(Date.now() - visibleSinceRef.current, 120000);
+          activeMsRef.current += delta;
+          visibleSinceRef.current = null;
+        }
+      },
+      { threshold: 0.35 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [image.id]);
+
+  const computeElapsedMs = (): number => {
+    let total = activeMsRef.current;
+    if (visibleSinceRef.current != null) {
+      const delta = Math.min(Date.now() - visibleSinceRef.current, 120000);
+      total += delta;
+      activeMsRef.current = total;
+      visibleSinceRef.current = Date.now();
+    }
+    return Math.max(200, Math.round(total));
+  };
+
+  const selectedArtifactTags = evaluation?.artifactTags || [];
+
+  const handleToggleArtifactTag = (tag: string) => {
+    const exists = selectedArtifactTags.includes(tag);
+    const updated = exists
+      ? selectedArtifactTags.filter((t) => t !== tag)
+      : [...selectedArtifactTags, tag];
+    onUpdateEvaluation(image.id, {
+      artifactTags: updated,
+      decisionTimeMs: computeElapsedMs(),
+      evaluatedAt: new Date().toISOString(),
+    });
+  };
 
   const isQ1 = evaluation?.q1_classification != null;
   const isQ2 = evaluation?.q2_realism != null;
@@ -78,6 +132,7 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
 
   return (
     <div
+      ref={cardRef}
       id={`slot-${slotIndex}`}
       className={`bg-white border-2 border-black rounded-3xl shadow-neo-md transition-all duration-150 overflow-hidden ${
         isComplete ? 'ring-2 ring-black/5' : ''
@@ -121,6 +176,13 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
             <Upload className="w-3 h-3" />
             <span>Change Scan</span>
           </button>
+
+          {evaluation?.decisionTimeMs && (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-300">
+              <Clock className="w-3 h-3" />
+              <span>{(evaluation.decisionTimeMs / 1000).toFixed(1)}s</span>
+            </span>
+          )}
 
           {evaluation?.evaluatedAt && (
             <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300">
@@ -353,12 +415,13 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                   <button
                     key={option}
                     type="button"
-                    onClick={() =>
-                      onUpdateEvaluation(image.id, {
-                        q1_classification: option,
-                        evaluatedAt: new Date().toISOString(),
-                      })
-                    }
+                      onClick={() =>
+                        onUpdateEvaluation(image.id, {
+                          q1_classification: option,
+                          decisionTimeMs: computeElapsedMs(),
+                          evaluatedAt: new Date().toISOString(),
+                        })
+                      }
                     className={`group relative py-3 px-3 rounded-2xl border-2 border-black text-xs sm:text-sm font-black transition-all duration-150 flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       isSelected
                         ? option === 'Real'
@@ -416,6 +479,7 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                       onClick={() =>
                         onUpdateEvaluation(image.id, {
                           q2_realism: score,
+                          decisionTimeMs: computeElapsedMs(),
                           evaluatedAt: new Date().toISOString(),
                         })
                       }
@@ -467,6 +531,7 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                       onClick={() =>
                         onUpdateEvaluation(image.id, {
                           q3_artifacts: score,
+                          decisionTimeMs: computeElapsedMs(),
                           evaluatedAt: new Date().toISOString(),
                         })
                       }
@@ -486,6 +551,36 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                 <span>3: Moderate artifacts</span>
                 <span>5: Severe artifacts</span>
               </div>
+
+              {/* Structured Failure / Artifact Taxonomy Tags (Always shown if Q3 >= 2 or tags selected) */}
+              {(currentQ3 == null || currentQ3 >= 2 || selectedArtifactTags.length > 0) && (
+                <div className="pt-2 space-y-1.5">
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                    <Tag className="w-3 h-3 text-[#F59E0B]" />
+                    <span>Observed Artifact Type(s) (optional):</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ARTIFACT_TAXONOMY_TAGS.map((tag) => {
+                      const active = selectedArtifactTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleToggleArtifactTag(tag)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border border-black transition cursor-pointer ${
+                            active
+                              ? 'bg-[#FEF08A] text-black shadow-neo-sm'
+                              : 'bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {active ? '✓ ' : '+ '}
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -518,6 +613,7 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                       onClick={() =>
                         onUpdateEvaluation(image.id, {
                           q4_plausibility: score,
+                          decisionTimeMs: computeElapsedMs(),
                           evaluatedAt: new Date().toISOString(),
                         })
                       }

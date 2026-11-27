@@ -21,6 +21,8 @@ import {
 interface HeaderHeroProps {
   expertId: string;
   setExpertId: (id: string) => void;
+  experienceTier?: string;
+  setExperienceTier?: (tier: string) => void;
   totalImages: number;
   totalEvaluated: number;
   onUploadFiles: (files: FileList) => void;
@@ -36,6 +38,8 @@ interface HeaderHeroProps {
 export const HeaderHero: React.FC<HeaderHeroProps> = ({
   expertId,
   setExpertId,
+  experienceTier = 'Senior (>10 yrs)',
+  setExperienceTier,
   totalImages,
   totalEvaluated,
   onUploadFiles,
@@ -303,6 +307,22 @@ export const HeaderHero: React.FC<HeaderHeroProps> = ({
                   className="bg-transparent text-black font-mono font-bold focus:outline-none w-24 text-xs placeholder-slate-400"
                 />
               </div>
+
+              {setExperienceTier && (
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border-2 border-black shadow-neo-sm">
+                  <span className="text-black">Role:</span>
+                  <select
+                    value={experienceTier}
+                    onChange={(e) => setExperienceTier(e.target.value)}
+                    className="bg-transparent text-black font-bold focus:outline-none text-xs cursor-pointer"
+                  >
+                    <option value="Senior (>10 yrs)">Senior (&gt;10 yrs)</option>
+                    <option value="Specialist (5–10 yrs)">Specialist (5–10 yrs)</option>
+                    <option value="Resident (<5 yrs)">Resident (&lt;5 yrs)</option>
+                    <option value="Researcher / Other">Researcher / Other</option>
+                  </select>
+                </div>
+              )}
 
               {totalImages > 0 && (
                 <div className="text-slate-800 font-mono">

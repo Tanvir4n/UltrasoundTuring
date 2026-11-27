@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { UltrasoundImageItem, ImageEvaluationResponse, GroundTruthType } from '../types/evaluation';
+import { UltrasoundImageItem, ImageEvaluationResponse, GroundTruthType, ExpertExperienceTier } from '../types/evaluation';
 import { exportEvaluationsToCSV, exportEvaluationsToJSON, calculateRealtimeMetrics } from '../utils/metrics';
 
 import { HeaderHero } from '../components/HeaderHero';
@@ -35,6 +35,7 @@ const padSlotsToMinimum = (items: UltrasoundImageItem[]): UltrasoundImageItem[] 
 
 export default function AssessmentPage() {
   const [expertId, setExpertId] = useState<string>('');
+  const [experienceTier, setExperienceTier] = useState<string>('Senior (>10 yrs)');
   const [images, setImages] = useState<UltrasoundImageItem[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
@@ -96,6 +97,9 @@ export default function AssessmentPage() {
     const savedExpert = localStorage.getItem('ous_expert_id');
     if (savedExpert) setExpertId(savedExpert);
 
+    const savedTier = localStorage.getItem('ous_expert_tier');
+    if (savedTier) setExperienceTier(savedTier);
+
     const savedEvals = localStorage.getItem('ous_evaluations');
     if (savedEvals) {
       try {
@@ -131,10 +135,11 @@ export default function AssessmentPage() {
   // Sync state to LocalStorage & Backend API
   useEffect(() => {
     if (expertId) localStorage.setItem('ous_expert_id', expertId);
+    if (experienceTier) localStorage.setItem('ous_expert_tier', experienceTier);
     if (Object.keys(evaluations).length > 0) {
       localStorage.setItem('ous_evaluations', JSON.stringify(evaluations));
     }
-  }, [expertId, evaluations]);
+  }, [expertId, experienceTier, evaluations]);
 
   // Handle Bulk Upload of Images from User's Computer
   const handleUploadFiles = (fileList: FileList) => {
@@ -236,6 +241,7 @@ export default function AssessmentPage() {
       const updatedEvaluation: ImageEvaluationResponse = {
         ...current,
         ...update,
+        experienceTier: experienceTier as ExpertExperienceTier,
         evaluatedAt: new Date().toISOString(),
       };
 
@@ -355,6 +361,8 @@ export default function AssessmentPage() {
       <HeaderHero
         expertId={expertId}
         setExpertId={setExpertId}
+        experienceTier={experienceTier}
+        setExperienceTier={setExperienceTier}
         totalImages={images.filter((i) => Boolean(i.imageUrl)).length}
         totalEvaluated={totalEvaluated}
         onUploadFiles={handleUploadFiles}

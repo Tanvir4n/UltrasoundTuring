@@ -84,15 +84,19 @@ function escapeCsvCell(val: unknown): string {
 function generateCsvContent(data: StoredData): string {
   const headers = [
     'Expert_ID',
+    'Experience_Tier',
     'Slot_Number',
     'Image_ID',
     'File_Name',
+    'Morphology',
     'Ground_Truth',
     'Q1_Classification',
     'Evaluation_Outcome',
     'Q2_Anatomical_Realism_1to5',
     'Q3_Image_Artifacts_1to5',
     'Q4_Clinical_Plausibility_1to5',
+    'Decision_Time_Sec',
+    'Artifact_Tags',
     'Clinical_Notes',
     'Evaluated_At',
   ];
@@ -118,6 +122,7 @@ function generateCsvContent(data: StoredData): string {
         'Unknown';
       const resolvedFileName = entry.fileName || manifestItem?.fileName || entry.imageId;
       const resolvedSlot = entry.slotNumber ?? manifestItem?.globalIndex ?? '';
+      const resolvedMorphology = manifestItem?.morphology || '';
       const q1 = entry.q1_classification;
 
       let outcome = 'Pending';
@@ -135,18 +140,27 @@ function generateCsvContent(data: StoredData): string {
         }
       }
 
+      const decisionSec =
+        entry.decisionTimeMs && entry.decisionTimeMs > 0 && entry.decisionTimeMs < 600000
+          ? (entry.decisionTimeMs / 1000).toFixed(2)
+          : '';
+
       rows.push(
         [
           escapeCsvCell(expertId),
+          escapeCsvCell(entry.experienceTier || ''),
           escapeCsvCell(resolvedSlot),
           escapeCsvCell(entry.imageId),
           escapeCsvCell(resolvedFileName),
+          escapeCsvCell(resolvedMorphology),
           escapeCsvCell(gt),
           escapeCsvCell(q1 || 'Not Rated'),
           escapeCsvCell(outcome),
           escapeCsvCell(entry.q2_realism ?? ''),
           escapeCsvCell(entry.q3_artifacts ?? ''),
           escapeCsvCell(entry.q4_plausibility ?? ''),
+          escapeCsvCell(decisionSec),
+          escapeCsvCell((entry.artifactTags || []).join('; ')),
           escapeCsvCell(entry.clinicalNotes || ''),
           escapeCsvCell(entry.evaluatedAt || ''),
         ].join(',')
