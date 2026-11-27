@@ -9,6 +9,7 @@ export interface ManifestScanItem {
   globalIndex: number;
   fileName: string;
   relativePath: string;
+  publicUrl?: string;
   groundTruth: GroundTruthType;
   morphology: 'PCOS' | 'NON_PCOS';
 }
@@ -127,17 +128,36 @@ export function generateBalancedManifest(): DatasetManifest {
 
     pageCombined.forEach((item, slotIdx) => {
       const globalIndex = p * 10 + slotIdx + 1;
+      const id = `SCAN-${String(globalIndex).padStart(3, '0')}`;
+      const ext = path.extname(item.fileName).toLowerCase() || '.png';
+      const targetName = `${id}${ext}`;
       scans.push({
-        id: `SCAN-${String(globalIndex).padStart(3, '0')}`,
+        id,
         slotNumber: slotIdx + 1,
         pageNumber: p + 1,
         globalIndex,
         fileName: item.fileName,
         relativePath: item.relativePath,
+        publicUrl: `/scans/${targetName}`,
         groundTruth: item.groundTruth,
         morphology: item.morphology,
       });
     });
+  }
+
+  // Sync newly sampled 100 scans to public/scans/ for fast static serving
+  const publicScansDir = path.join(cwd, 'public', 'scans');
+  if (!fs.existsSync(publicScansDir)) {
+    fs.mkdirSync(publicScansDir, { recursive: true });
+  }
+  for (const s of scans) {
+    if (s.publicUrl) {
+      const src = path.join(cwd, s.relativePath);
+      const dest = path.join(cwd, 'public', s.publicUrl.replace(/^\//, ''));
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dest);
+      }
+    }
   }
 
   const manifest: DatasetManifest = {
@@ -162,8 +182,12 @@ export function getOrCreateDatasetManifest(): DatasetManifest | null {
       const content = fs.readFileSync(MANIFEST_FILE, 'utf-8');
       const parsed: DatasetManifest = JSON.parse(content);
       if (parsed && Array.isArray(parsed.scans) && parsed.scans.length > 0) {
-        const firstPath = path.join(process.cwd(), parsed.scans[0].relativePath);
-        if (fs.existsSync(firstPath)) {
+        const first = parsed.scans[0];
+        const publicPath = first.publicUrl
+          ? path.join(process.cwd(), 'public', first.publicUrl.replace(/^\//, ''))
+          : null;
+        const relPath = path.join(process.cwd(), first.relativePath);
+        if ((publicPath && fs.existsSync(publicPath)) || fs.existsSync(relPath)) {
           return parsed;
         }
       }

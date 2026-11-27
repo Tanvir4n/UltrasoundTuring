@@ -1,12 +1,33 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { ImageEvaluationResponse, GroundTruthType } from '@/types/evaluation';
 import { getScanManifestItem } from '@/lib/dataset';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const RESPONSES_JSON_FILE = path.join(DATA_DIR, 'responses.json');
-const RESPONSES_CSV_FILE = path.join(DATA_DIR, 'responses.csv');
+function resolveWritableDataDir(): string {
+  const localDir = path.join(process.cwd(), 'data');
+  try {
+    if (!fs.existsSync(localDir)) {
+      fs.mkdirSync(localDir, { recursive: true });
+    }
+    const testFile = path.join(localDir, '.write_test');
+    fs.writeFileSync(testFile, '', 'utf-8');
+    fs.unlinkSync(testFile);
+    return localDir;
+  } catch {
+    // Fallback for read-only serverless environments (e.g. Vercel)
+    const tmpDir = path.join(os.tmpdir(), 'ultrasound-turing-data');
+    try {
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+    } catch {}
+    return tmpDir;
+  }
+}
+
+let cachedMemoryStore: StoredData | null = null;
 
 interface StoredEvaluationEntry extends ImageEvaluationResponse {
   slotNumber?: number;
@@ -21,34 +42,33 @@ interface StoredData {
   latestResponses: Record<string, StoredEvaluationEntry>;
 }
 
-function ensureDataDir(): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
 function loadStoredData(): StoredData {
   try {
-    ensureDataDir();
-    if (fs.existsSync(RESPONSES_JSON_FILE)) {
-      const content = fs.readFileSync(RESPONSES_JSON_FILE, 'utf-8');
+    const dir = resolveWritableDataDir();
+    const jsonFile = path.join(dir, 'responses.json');
+    if (fs.existsSync(jsonFile)) {
+      const content = fs.readFileSync(jsonFile, 'utf-8');
       const parsed = JSON.parse(content);
-      return {
+      const loaded: StoredData = {
         lastUpdated: parsed.lastUpdated || new Date().toISOString(),
         groundTruthMap: parsed.groundTruthMap || {},
         byExpert: parsed.byExpert || {},
         latestResponses: parsed.latestResponses || {},
       };
+      cachedMemoryStore = loaded;
+      return loaded;
     }
   } catch (err) {
     console.error('Error reading responses.json:', err);
   }
+  if (cachedMemoryStore) return cachedMemoryStore;
   const emptyData: StoredData = {
     lastUpdated: new Date().toISOString(),
     groundTruthMap: {},
     byExpert: {},
     latestResponses: {},
   };
+  cachedMemoryStore = emptyData;
   saveStoredData(emptyData);
   return emptyData;
 }
@@ -139,11 +159,14 @@ function generateCsvContent(data: StoredData): string {
 }
 
 function saveStoredData(data: StoredData): void {
+  cachedMemoryStore = data;
   try {
-    ensureDataDir();
-    fs.writeFileSync(RESPONSES_JSON_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    const dir = resolveWritableDataDir();
+    const jsonFile = path.join(dir, 'responses.json');
+    const csvFile = path.join(dir, 'responses.csv');
+    fs.writeFileSync(jsonFile, JSON.stringify(data, null, 2), 'utf-8');
     const csvContent = generateCsvContent(data);
-    fs.writeFileSync(RESPONSES_CSV_FILE, csvContent, 'utf-8');
+    fs.writeFileSync(csvFile, csvContent, 'utf-8');
   } catch (err) {
     console.error('Error saving responses to disk:', err);
   }

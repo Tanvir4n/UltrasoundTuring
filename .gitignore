@@ -27,6 +27,7 @@ yarn-error.log*
 /data/*.json
 /data/*.csv
 !/data/.gitkeep
+!/data/dataset_manifest.json
 
 # Large Ultrasound Image Datasets (served locally, excluded from git)
 /real_images/
