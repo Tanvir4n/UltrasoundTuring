@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UltrasoundImageItem, ImageEvaluationResponse, GroundTruthType } from '../types/evaluation';
-import { exportEvaluationsToCSV, exportEvaluationsToJSON } from '../utils/metrics';
+import { exportEvaluationsToCSV, exportEvaluationsToJSON, calculateRealtimeMetrics } from '../utils/metrics';
 
 import { HeaderHero } from '../components/HeaderHero';
 import { ImageAssessmentCard } from '../components/ImageAssessmentCard';
@@ -11,7 +11,7 @@ import { ImageLightboxModal } from '../components/ImageLightboxModal';
 import { AnalyticsDashboardModal } from '../components/AnalyticsDashboardModal';
 import { GroundTruthManagerModal } from '../components/GroundTruthManagerModal';
 
-import { Upload, ChevronRight, ChevronLeft, Download, BarChart3, ShieldCheck } from 'lucide-react';
+import { Upload, ChevronRight, ChevronLeft, Download, BarChart3, ShieldCheck, RefreshCw } from 'lucide-react';
 
 const DEFAULT_TOTAL_SLOTS = 100; // Exactly 10 pages of 10 slots each = 100 slots
 
@@ -43,6 +43,8 @@ export default function AssessmentPage() {
   const [lightboxImage, setLightboxImage] = useState<UltrasoundImageItem | null>(null);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState<boolean>(false);
   const [isGroundTruthOpen, setIsGroundTruthOpen] = useState<boolean>(false);
+  const [isReshuffling, setIsReshuffling] = useState<boolean>(false);
+  const [showLiveResultsStrip, setShowLiveResultsStrip] = useState<boolean>(true);
 
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const slotsSectionRef = useRef<HTMLDivElement>(null);
@@ -300,6 +302,33 @@ export default function AssessmentPage() {
     slotsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Reshuffle a fresh random 50/50 batch (50 Real + 50 Synthetic) from local dataset folders
+  const handleReshuffleDataset = async () => {
+    if (
+      Object.keys(evaluations).length > 0 &&
+      !confirm('Generate a fresh random 50/50 sample (50 Real + 50 Synthetic)? This will replace the current 100-scan sequence.')
+    ) {
+      return;
+    }
+
+    try {
+      setIsReshuffling(true);
+      const res = await fetch('/api/images', { method: 'POST' });
+      const data = await res.json();
+      if (data?.images && data.images.length > 0) {
+        setImages(padSlotsToMinimum(data.images));
+        setEvaluations({});
+        localStorage.removeItem('ous_evaluations');
+        localStorage.removeItem('ous_custom_images');
+        setCurrentPage(1);
+      }
+    } catch (err) {
+      console.error('Failed to reshuffle dataset:', err);
+    } finally {
+      setIsReshuffling(false);
+    }
+  };
+
   // Pagination Math (Strictly 10 slots per page, always at least 10 pages)
   const totalPages = Math.max(10, Math.ceil(images.length / itemsPerPage));
   const pageStartIndex = (currentPage - 1) * itemsPerPage;
@@ -310,6 +339,14 @@ export default function AssessmentPage() {
   const totalEvaluated = Object.values(evaluations).filter(
     (e) => e && (e.q1_classification != null || e.q2_realism != null || e.q3_artifacts != null || e.q4_plausibility != null)
   ).length;
+
+  const liveMetrics = useMemo(
+    () => calculateRealtimeMetrics(images, evaluations),
+    [images, evaluations]
+  );
+
+  const realDatasetCount = images.filter((i) => i.groundTruth === 'Real').length;
+  const syntheticDatasetCount = images.filter((i) => i.groundTruth === 'Synthetic').length;
 
   return (
     <div className="flex-1 flex flex-col bg-[#fbfbf9] text-[#111827] min-h-screen">
@@ -353,14 +390,33 @@ export default function AssessmentPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setShowLiveResultsStrip((v) => !v)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black bg-[#FAF9F6] hover:bg-slate-100 hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 cursor-pointer"
+            >
+              <span>{showLiveResultsStrip ? 'Hide Results Strip' : 'Show Results Strip'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsAnalyticsOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black bg-[#84CC16] hover:bg-[#65a30d] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
             >
               <BarChart3 className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Live Analytics</span>
+              <span>Full Analysis &amp; Charts</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleReshuffleDataset}
+              disabled={isReshuffling}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black bg-white hover:bg-[#EBF7FD] hover:-translate-y-0.5 hover:shadow-neo text-black border-2 border-black shadow-neo-sm transition-all duration-150 active:translate-x-0.5 active:translate-y-0.5 cursor-pointer disabled:opacity-50"
+              title="Randomly draw a fresh 50 Real + 50 Synthetic dataset from local folders"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isReshuffling ? 'animate-spin' : ''}`} />
+              <span>{isReshuffling ? 'Sampling...' : 'Reshuffle 50/50'}</span>
             </button>
 
             <button
@@ -410,6 +466,69 @@ export default function AssessmentPage() {
           </div>
 
         </div>
+
+        {/* LIVE RESULT & ANALYSIS SUMMARY STRIP */}
+        {showLiveResultsStrip && (
+          <div className="mt-4 bg-white border-2 border-black rounded-3xl p-4 sm:p-5 shadow-neo-sm space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#84CC16] animate-pulse border border-black" />
+                <span className="font-black text-xs sm:text-sm text-black uppercase tracking-wide">
+                  Live Result &amp; Analysis Telemetry
+                </span>
+                <span className="bg-[#9CDBFA] text-black border border-black px-2.5 py-0.5 rounded-full text-[11px] font-black font-mono">
+                  50/50 Split: {realDatasetCount} Real / {syntheticDatasetCount} Synthetic
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAnalyticsOpen(true)}
+                className="text-xs font-black text-[#0284c7] hover:underline"
+              >
+                Open Charts, Confusion Matrix &amp; Log →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+              <div className="bg-[#FAF9F6] border border-black rounded-xl px-3 py-2">
+                <div className="text-[10px] font-black uppercase text-slate-500">Accuracy</div>
+                <div className="text-lg font-black text-black">
+                  {liveMetrics.decisiveAccuracy != null ? `${liveMetrics.decisiveAccuracy}%` : '--%'}
+                </div>
+              </div>
+              <div className="bg-[#FAF9F6] border border-black rounded-xl px-3 py-2">
+                <div className="text-[10px] font-black uppercase text-slate-500">Fooling Rate</div>
+                <div className="text-lg font-black text-[#0284c7]">
+                  {liveMetrics.foolingRate != null ? `${liveMetrics.foolingRate}%` : '--%'}
+                </div>
+              </div>
+              <div className="bg-[#FAF9F6] border border-black rounded-xl px-3 py-2">
+                <div className="text-[10px] font-black uppercase text-slate-500">Realism (Q2)</div>
+                <div className="text-lg font-black text-black">
+                  {liveMetrics.meanRealismOverall != null ? `${liveMetrics.meanRealismOverall}/5` : '--/5'}
+                </div>
+              </div>
+              <div className="bg-[#FAF9F6] border border-black rounded-xl px-3 py-2">
+                <div className="text-[10px] font-black uppercase text-slate-500">Artifacts (Q3)</div>
+                <div className="text-lg font-black text-[#F59E0B]">
+                  {liveMetrics.meanArtifactsOverall != null ? `${liveMetrics.meanArtifactsOverall}/5` : '--/5'}
+                </div>
+              </div>
+              <div className="bg-[#FAF9F6] border border-black rounded-xl px-3 py-2">
+                <div className="text-[10px] font-black uppercase text-slate-500">Plausibility (Q4)</div>
+                <div className="text-lg font-black text-black">
+                  {liveMetrics.meanPlausibilityOverall != null ? `${liveMetrics.meanPlausibilityOverall}/5` : '--/5'}
+                </div>
+              </div>
+              <div className="bg-[#FAF9F6] border border-black rounded-xl px-3 py-2">
+                <div className="text-[10px] font-black uppercase text-slate-500">Progress</div>
+                <div className="text-lg font-black text-emerald-700 font-mono">
+                  {liveMetrics.totalEvaluated}/{liveMetrics.totalScans}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* 3. MAIN EVALUATION BODY: 10 SLOTS */}

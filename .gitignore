@@ -28,6 +28,10 @@ yarn-error.log*
 /data/*.csv
 !/data/.gitkeep
 
+# Large Ultrasound Image Datasets (served locally, excluded from git)
+/real_images/
+/synthetic_images/
+
 .env*.local
 .env
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { ImageEvaluationResponse, GroundTruthType } from '@/types/evaluation';
+import { getScanManifestItem } from '@/lib/dataset';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const RESPONSES_JSON_FILE = path.join(DATA_DIR, 'responses.json');
@@ -89,8 +90,14 @@ function generateCsvContent(data: StoredData): string {
     });
 
     for (const entry of entries) {
+      const manifestItem = getScanManifestItem(entry.imageId);
       const gt: GroundTruthType =
-        data.groundTruthMap[entry.imageId] || entry.groundTruth || 'Unknown';
+        data.groundTruthMap[entry.imageId] ||
+        entry.groundTruth ||
+        manifestItem?.groundTruth ||
+        'Unknown';
+      const resolvedFileName = entry.fileName || manifestItem?.fileName || entry.imageId;
+      const resolvedSlot = entry.slotNumber ?? manifestItem?.globalIndex ?? '';
       const q1 = entry.q1_classification;
 
       let outcome = 'Pending';
@@ -111,9 +118,9 @@ function generateCsvContent(data: StoredData): string {
       rows.push(
         [
           escapeCsvCell(expertId),
-          escapeCsvCell(entry.slotNumber ?? ''),
+          escapeCsvCell(resolvedSlot),
           escapeCsvCell(entry.imageId),
-          escapeCsvCell(entry.fileName || entry.imageId),
+          escapeCsvCell(resolvedFileName),
           escapeCsvCell(gt),
           escapeCsvCell(q1 || 'Not Rated'),
           escapeCsvCell(outcome),

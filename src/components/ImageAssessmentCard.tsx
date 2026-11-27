@@ -98,11 +98,9 @@ export const ImageAssessmentCard: React.FC<ImageAssessmentCardProps> = ({
                 (Scan {globalIndex})
               </span>
             </div>
-            {image.fileName && image.fileName !== image.id && (
-              <div className="text-[11px] text-slate-500 font-mono truncate max-w-xs">
-                File: {image.fileName}
-              </div>
-            )}
+            <div className="text-[11px] text-slate-500 font-mono">
+              Blind Clinical Assessment • Ovarian Morphology
+            </div>
           </div>
         </div>
 

@@ -36,11 +36,9 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               <span className="font-extrabold text-sm text-black block">
                 High-Resolution Ultrasound Inspection
               </span>
-              {image.fileName && (
-                <span className="text-[11px] font-mono text-slate-500">
-                  {image.fileName}
-                </span>
-              )}
+              <span className="text-[11px] font-mono text-slate-500">
+                Blind Evaluation Viewer • 10mm Reference Scale
+              </span>
             </div>
           </div>
 

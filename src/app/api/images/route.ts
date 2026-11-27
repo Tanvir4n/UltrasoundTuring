@@ -2,11 +2,35 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { GroundTruthType } from '@/types/evaluation';
+import { getOrCreateDatasetManifest, generateBalancedManifest } from '@/lib/dataset';
 
 export async function GET() {
   try {
+    // 1. Prefer balanced 50/50 dataset from real_images + synthetic_images
+    const manifest = getOrCreateDatasetManifest();
+    if (manifest && manifest.scans.length > 0) {
+      const images = manifest.scans.map((scan) => ({
+        id: scan.id,
+        fileName: scan.fileName,
+        imageUrl: `/api/scan/${encodeURIComponent(scan.id)}?v=${encodeURIComponent(manifest.generatedAt)}`,
+        slotNumber: scan.slotNumber,
+        groundTruth: scan.groundTruth,
+      }));
+
+      return NextResponse.json({
+        images,
+        datasetSummary: {
+          totalScans: manifest.totalScans,
+          realCount: manifest.realCount,
+          syntheticCount: manifest.syntheticCount,
+          generatedAt: manifest.generatedAt,
+          mode: '50_50_balanced',
+        },
+      });
+    }
+
+    // 2. Fallback: scan public/images folder if present
     const imagesDir = path.join(process.cwd(), 'public', 'images');
-    
     if (!fs.existsSync(imagesDir)) {
       return NextResponse.json({ images: [] });
     }
@@ -45,7 +69,35 @@ export async function GET() {
 
     return NextResponse.json({ images: imageFiles });
   } catch (error) {
-    console.error('Error reading public/images directory:', error);
+    console.error('Error reading images:', error);
     return NextResponse.json({ images: [] }, { status: 500 });
+  }
+}
+
+// POST /api/images?reshuffle=true to generate a fresh 50/50 batch of 100 scans
+export async function POST() {
+  try {
+    const manifest = generateBalancedManifest();
+    const images = manifest.scans.map((scan) => ({
+      id: scan.id,
+      fileName: scan.fileName,
+      imageUrl: `/api/scan/${encodeURIComponent(scan.id)}?v=${encodeURIComponent(manifest.generatedAt)}`,
+      slotNumber: scan.slotNumber,
+      groundTruth: scan.groundTruth,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      images,
+      datasetSummary: {
+        totalScans: manifest.totalScans,
+        realCount: manifest.realCount,
+        syntheticCount: manifest.syntheticCount,
+        generatedAt: manifest.generatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error reshuffling dataset:', error);
+    return NextResponse.json({ success: false, error: 'Failed to reshuffle dataset' }, { status: 500 });
   }
 }

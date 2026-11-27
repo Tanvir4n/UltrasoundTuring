@@ -264,6 +264,185 @@ export const AnalyticsDashboardModal: React.FC<AnalyticsDashboardModalProps> = (
 
           </div>
 
+          {/* 2.5 Real vs. Synthetic Comparison Charts & Q3 Artifact Distribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Real vs Synthetic Score Comparison (Q2, Q4, Q3) */}
+            <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm space-y-4">
+              <div>
+                <h4 className="font-black text-base text-black">
+                  Real vs. Synthetic Mean Score Comparison
+                </h4>
+                <p className="text-xs text-slate-500 font-medium">
+                  Side-by-side comparison across Q2 Realism, Q4 Plausibility, and Q3 Artifacts (1–5 scale).
+                </p>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                {/* Q2 Anatomical Realism */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between font-black text-black">
+                    <span>Q2: Anatomical Realism (Higher = Better)</span>
+                    <span className="font-mono text-slate-500">
+                      Real {metrics.meanRealismReal ?? '--'} vs Syn {metrics.meanRealismSynthetic ?? '--'}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 font-mono font-bold text-emerald-700 text-[11px]">Real</span>
+                      <div className="flex-1 bg-slate-100 h-3.5 rounded-full border border-black overflow-hidden">
+                        <div
+                          className="bg-[#86EFAC] h-full transition-all duration-300"
+                          style={{ width: `${((metrics.meanRealismReal ?? 0) / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right font-mono font-black">{metrics.meanRealismReal ?? '--'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 font-mono font-bold text-[#0284c7] text-[11px]">Synthetic</span>
+                      <div className="flex-1 bg-slate-100 h-3.5 rounded-full border border-black overflow-hidden">
+                        <div
+                          className="bg-[#9CDBFA] h-full transition-all duration-300"
+                          style={{ width: `${((metrics.meanRealismSynthetic ?? 0) / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right font-mono font-black">{metrics.meanRealismSynthetic ?? '--'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Q4 Clinical Plausibility */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between font-black text-black">
+                    <span>Q4: Clinical Plausibility (Higher = Better)</span>
+                    <span className="font-mono text-slate-500">
+                      Real {metrics.meanPlausibilityReal ?? '--'} vs Syn {metrics.meanPlausibilitySynthetic ?? '--'}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 font-mono font-bold text-emerald-700 text-[11px]">Real</span>
+                      <div className="flex-1 bg-slate-100 h-3.5 rounded-full border border-black overflow-hidden">
+                        <div
+                          className="bg-[#86EFAC] h-full transition-all duration-300"
+                          style={{ width: `${((metrics.meanPlausibilityReal ?? 0) / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right font-mono font-black">{metrics.meanPlausibilityReal ?? '--'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 font-mono font-bold text-[#0284c7] text-[11px]">Synthetic</span>
+                      <div className="flex-1 bg-slate-100 h-3.5 rounded-full border border-black overflow-hidden">
+                        <div
+                          className="bg-[#9CDBFA] h-full transition-all duration-300"
+                          style={{ width: `${((metrics.meanPlausibilitySynthetic ?? 0) / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right font-mono font-black">{metrics.meanPlausibilitySynthetic ?? '--'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Q3 Artifacts */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between font-black text-black">
+                    <span>Q3: Artifacts (Lower = Cleaner)</span>
+                    <span className="font-mono text-slate-500">
+                      Real {metrics.meanArtifactsReal ?? '--'} vs Syn {metrics.meanArtifactsSynthetic ?? '--'}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 font-mono font-bold text-emerald-700 text-[11px]">Real</span>
+                      <div className="flex-1 bg-slate-100 h-3.5 rounded-full border border-black overflow-hidden">
+                        <div
+                          className="bg-[#FEF08A] h-full transition-all duration-300"
+                          style={{ width: `${((metrics.meanArtifactsReal ?? 0) / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right font-mono font-black">{metrics.meanArtifactsReal ?? '--'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 font-mono font-bold text-amber-700 text-[11px]">Synthetic</span>
+                      <div className="flex-1 bg-slate-100 h-3.5 rounded-full border border-black overflow-hidden">
+                        <div
+                          className="bg-[#F59E0B] h-full transition-all duration-300"
+                          style={{ width: `${((metrics.meanArtifactsSynthetic ?? 0) / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right font-mono font-black">{metrics.meanArtifactsSynthetic ?? '--'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Q3 Artifact Score Distribution (1..5) */}
+            <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between space-y-4">
+              <div>
+                <h4 className="font-black text-base text-black">
+                  Q3 Artifact Score Distribution (1–5)
+                </h4>
+                <p className="text-xs text-slate-500 font-medium">
+                  Frequency breakdown of visual artifacts across Real vs. Synthetic scans.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-5 gap-2.5 items-end pt-2 h-36">
+                {[1, 2, 3, 4, 5].map((score) => {
+                  const realCountScore = images.filter(
+                    (img) => img.groundTruth === 'Real' && evaluations[img.id]?.q3_artifacts === score
+                  ).length;
+                  const synCountScore = images.filter(
+                    (img) => img.groundTruth === 'Synthetic' && evaluations[img.id]?.q3_artifacts === score
+                  ).length;
+                  const maxBar = Math.max(
+                    1,
+                    ...[1, 2, 3, 4, 5].map((s) =>
+                      Math.max(
+                        images.filter((i) => i.groundTruth === 'Real' && evaluations[i.id]?.q3_artifacts === s).length,
+                        images.filter((i) => i.groundTruth === 'Synthetic' && evaluations[i.id]?.q3_artifacts === s).length
+                      )
+                    )
+                  );
+                  const realPct = Math.round((realCountScore / maxBar) * 100);
+                  const synPct = Math.round((synCountScore / maxBar) * 100);
+
+                  return (
+                    <div key={score} className="flex flex-col items-center h-full justify-end gap-1.5">
+                      <div className="flex items-end gap-1 w-full justify-center flex-1">
+                        <div
+                          title={`Real (Score ${score}): ${realCountScore}`}
+                          className="w-4 bg-[#86EFAC] border border-black rounded-t-md transition-all"
+                          style={{ height: `${Math.max(realCountScore > 0 ? 12 : 4, realPct)}%` }}
+                        />
+                        <div
+                          title={`Synthetic (Score ${score}): ${synCountScore}`}
+                          className="w-4 bg-[#9CDBFA] border border-black rounded-t-md transition-all"
+                          style={{ height: `${Math.max(synCountScore > 0 ? 12 : 4, synPct)}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-black font-mono text-black bg-[#FAF9F6] border border-black px-2 py-0.5 rounded">
+                        {score}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] font-bold pt-2 border-t border-slate-200">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-3 h-3 bg-[#86EFAC] border border-black inline-block rounded-sm" /> Real Scans
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-3 h-3 bg-[#9CDBFA] border border-black inline-block rounded-sm" /> Synthetic Scans
+                  </span>
+                </div>
+                <span className="text-slate-500 font-mono">1: Clean • 5: Severe</span>
+              </div>
+            </div>
+          </div>
+
           {/* 3. Confusion Matrix Breakdown */}
           <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm space-y-4">
             <div className="flex items-center justify-between">
