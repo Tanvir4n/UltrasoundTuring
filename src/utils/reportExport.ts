@@ -5,6 +5,7 @@ import {
 } from '../types/evaluation';
 import { calculateRealtimeMetrics } from './metrics';
 import { calculateExpertBreakdown, calculateInterRaterMetrics } from './statistics';
+import { drawVectorFiguresInPDF, generateHighResFigureDataUrls } from './reportFigures';
 
 function getOutcomeLabel(
   gt: string,
@@ -172,6 +173,9 @@ export async function exportFullReportToPDF(
   });
 
   cursorY = getLastAutoTableY(doc, cursorY + 30) + 8;
+
+  // ==================== PUBLICATION-READY VECTOR FIGURES ====================
+  cursorY = drawVectorFiguresInPDF(doc, images, evaluations, metrics, cursorY, pageWidth, margin);
 
   // ==================== SECTION 3: LIKERT & MANN-WHITNEY U ====================
   if (cursorY > 235) {
@@ -443,6 +447,8 @@ export function exportFullReportToWord(
     );
   });
 
+  const figureUrls = generateHighResFigureDataUrls(images, evaluations, metrics);
+
   const html = `
 <!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office"
@@ -510,6 +516,18 @@ export function exportFullReportToWord(
       </tr>
     </tbody>
   </table>
+
+  ${
+    figureUrls
+      ? `
+  <h2>Publication-Ready Visual Figures</h2>
+  <p style="margin: 8px 0;"><img src="${figureUrls.fig1DataUrl}" width="680" alt="Figure 1: Real vs. Synthetic Mean Scores and Q3 Artifact Distribution" style="border: 1px solid #000;" /></p>
+  <p style="font-size: 9pt; color: #334155; margin-bottom: 14px;"><em><strong>Figure 1.</strong> (A) Real vs. Synthetic mean quality comparison across Q2 Realism, Q4 Plausibility, and Q3 Artifacts with Mann–Whitney U p-values. (B) Frequency distribution of Q3 artifact scores (1–5).</em></p>
+  <p style="margin: 8px 0;"><img src="${figureUrls.fig2DataUrl}" width="680" alt="Figure 2: Confusion Matrix Heatmap and Subgroup Performance" style="border: 1px solid #000;" /></p>
+  <p style="font-size: 9pt; color: #334155; margin-bottom: 14px;"><em><strong>Figure 2.</strong> (A) Color-coded Confusion Matrix heatmap showing counts and row percentages. (B) Diagnostic &amp; PCOS vs. NON-PCOS subgroup performance (%).</em></p>
+  `
+      : ''
+  }
 
   <h2>3. Perceptual Quality &amp; Mann–Whitney U Hypothesis Testing</h2>
   <table>
