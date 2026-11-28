@@ -1,5 +1,4 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from 'jspdf';
 import {
   ImageEvaluationResponse,
   UltrasoundImageItem,
@@ -27,14 +26,19 @@ function getLastAutoTableY(doc: jsPDF, fallbackY: number): number {
 /**
  * Exports all Visual Turing Test metrics, hypothesis tests, subgroup breakdowns,
  * multi-reader Kappa, and image-by-image logs into a crisp, multi-page vector PDF.
+ * Uses dynamic imports so jsPDF only loads when exporting (keeping initial bundle fast & low-memory).
  */
-export function exportFullReportToPDF(
+export async function exportFullReportToPDF(
   images: UltrasoundImageItem[],
   evaluations: Record<string, ImageEvaluationResponse>,
   expertId: string,
   experienceTier?: string,
   byExpert?: Record<string, Record<string, ImageEvaluationResponse>>
-): void {
+): Promise<void> {
+  const [{ default: JsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const metrics = calculateRealtimeMetrics(images, evaluations);
 
   const activeKey = (expertId || 'Anonymous').trim() || 'Anonymous';
@@ -45,7 +49,7 @@ export function exportFullReportToPDF(
   const expertRows = calculateExpertBreakdown(images, mergedByExpert);
   const interRater = calculateInterRaterMetrics(mergedByExpert);
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
 
