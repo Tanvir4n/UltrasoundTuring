@@ -324,7 +324,7 @@ export async function exportFullReportToPDF(
     cursorY = getLastAutoTableY(doc, cursorY + 35) + 8;
   }
 
-  // ==================== SECTION 7: SCAN-BY-SCAN APPENDIX ====================
+  // ==================== SECTION 7: SCAN-BY-SCAN APPENDIX (ALL 100 SCANS) ====================
   const evaluatedScans = images.filter((img) => {
     const e = evaluations[img.id];
     return Boolean(
@@ -336,33 +336,40 @@ export async function exportFullReportToPDF(
     );
   });
 
-  if (evaluatedScans.length > 0) {
+  if (images.length > 0) {
     doc.addPage();
     cursorY = 16;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text(`Appendix: Scan-by-Scan Evaluation Log (${evaluatedScans.length} Evaluated Scans)`, margin, cursorY);
+    doc.text(
+      `Appendix: Entire Dataset Scan-by-Scan Log (${evaluatedScans.length} Evaluated / ${images.length} Total Across Pages 1-10)`,
+      margin,
+      cursorY
+    );
 
     autoTable(doc, {
       startY: cursorY + 3,
       margin: { left: margin, right: margin },
       theme: 'grid',
-      headStyles: { fillColor: [11, 19, 43], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
-      bodyStyles: { fontSize: 7, textColor: [17, 24, 39] },
-      head: [['Scan ID', 'Pathology', 'Truth', 'Answer', 'Outcome', 'Q2/Q3/Q4', 'Time', 'Artifact Tags & Notes']],
-      body: evaluatedScans.map((img) => {
+      headStyles: { fillColor: [11, 19, 43], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.5 },
+      bodyStyles: { fontSize: 6.5, textColor: [17, 24, 39] },
+      head: [['#', 'Pg', 'Scan ID', 'Pathology', 'Truth', 'Answer', 'Outcome', 'Q2/Q3/Q4', 'Time', 'Tags & Notes']],
+      body: images.map((img, idx) => {
+        const pageNum = Math.floor(idx / 10) + 1;
         const e = evaluations[img.id];
         const gt = img.groundTruth || 'Unknown';
-        const outcome = getOutcomeLabel(gt, e.q1_classification);
-        const lat = e.decisionTimeMs ? `${(e.decisionTimeMs / 1000).toFixed(1)}s` : '--';
-        const notesParts = [...(e.artifactTags || []), e.clinicalNotes || ''].filter(Boolean).join('; ');
+        const outcome = getOutcomeLabel(gt, e?.q1_classification);
+        const lat = e?.decisionTimeMs ? `${(e.decisionTimeMs / 1000).toFixed(1)}s` : '--';
+        const notesParts = [...(e?.artifactTags || []), e?.clinicalNotes || ''].filter(Boolean).join('; ');
         return [
+          String(idx + 1),
+          `P${pageNum}`,
           img.id,
           img.morphology || '--',
           gt,
-          e.q1_classification || '--',
+          e?.q1_classification || '--',
           outcome,
-          `${e.q2_realism ?? '-'}/${e.q3_artifacts ?? '-'}/${e.q4_plausibility ?? '-'}`,
+          `${e?.q2_realism ?? '-'}/${e?.q3_artifacts ?? '-'}/${e?.q4_plausibility ?? '-'}`,
           lat,
           notesParts || '--',
         ];
@@ -565,17 +572,18 @@ export function exportFullReportToWord(
       : ''
   }
 
-  <h2>7. Complete Scan-by-Scan Evaluation Log (${evaluatedScans.length} Evaluated Scans)</h2>
+  <h2>7. Entire Dataset Scan-by-Scan Log (${evaluatedScans.length} Evaluated / ${images.length} Total Across Pages 1–10)</h2>
   <table>
     <thead>
-      <tr><th>Scan ID</th><th>Pathology</th><th>Ground Truth</th><th>Q1 Answer</th><th>Outcome</th><th>Q2/Q3/Q4</th><th>Latency</th><th>Artifact Tags &amp; Notes</th></tr>
+      <tr><th>#</th><th>Page</th><th>Scan ID</th><th>Pathology</th><th>Ground Truth</th><th>Q1 Answer</th><th>Outcome</th><th>Q2/Q3/Q4</th><th>Latency</th><th>Artifact Tags &amp; Notes</th></tr>
     </thead>
     <tbody>
-      ${evaluatedScans
-        .map((img) => {
+      ${images
+        .map((img, idx) => {
+          const pageNum = Math.floor(idx / 10) + 1;
           const e = evaluations[img.id];
           const gt = img.groundTruth || 'Unknown';
-          const outcome = getOutcomeLabel(gt, e.q1_classification);
+          const outcome = getOutcomeLabel(gt, e?.q1_classification);
           const badgeClass =
             outcome === 'Correct'
               ? 'badge-correct'
@@ -586,9 +594,9 @@ export function exportFullReportToWord(
               : outcome === 'Missed'
               ? 'badge-missed'
               : '';
-          const lat = e.decisionTimeMs ? `${(e.decisionTimeMs / 1000).toFixed(1)}s` : '--';
-          const notesParts = [...(e.artifactTags || []), e.clinicalNotes || ''].filter(Boolean).join('; ');
-          return `<tr><td><strong>${img.id}</strong></td><td>${img.morphology || '--'}</td><td>${gt}</td><td>${e.q1_classification || '--'}</td><td class="${badgeClass}">${outcome}</td><td>${e.q2_realism ?? '-'}/${e.q3_artifacts ?? '-'}/${e.q4_plausibility ?? '-'}</td><td>${lat}</td><td>${notesParts || '--'}</td></tr>`;
+          const lat = e?.decisionTimeMs ? `${(e.decisionTimeMs / 1000).toFixed(1)}s` : '--';
+          const notesParts = [...(e?.artifactTags || []), e?.clinicalNotes || ''].filter(Boolean).join('; ');
+          return `<tr><td>${idx + 1}</td><td>P${pageNum}</td><td><strong>${img.id}</strong></td><td>${img.morphology || '--'}</td><td>${gt}</td><td>${e?.q1_classification || '--'}</td><td class="${badgeClass}">${outcome}</td><td>${e?.q2_realism ?? '-'}/${e?.q3_artifacts ?? '-'}/${e?.q4_plausibility ?? '-'}</td><td>${lat}</td><td>${notesParts || '--'}</td></tr>`;
         })
         .join('')}
     </tbody>

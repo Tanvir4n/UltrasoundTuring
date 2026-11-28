@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   X,
   Download,
+  Upload,
   BarChart3,
   AlertTriangle,
   Users,
@@ -38,6 +39,7 @@ interface AnalyticsDashboardModalProps {
   expertId: string;
   experienceTier?: string;
   onOpenGroundTruthManager: () => void;
+  onImportJSON?: (importedEvals: Record<string, ImageEvaluationResponse>, importedExpertId?: string) => void;
 }
 
 type DashboardTab = 'overview' | 'statistics' | 'multireader' | 'log_latex';
@@ -50,11 +52,51 @@ export const AnalyticsDashboardModal: React.FC<AnalyticsDashboardModalProps> = (
   expertId,
   experienceTier,
   onOpenGroundTruthManager,
+  onImportJSON,
 }) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
   const [filter, setFilter] = useState<'all' | 'fooled' | 'correct' | 'uncertain' | 'real' | 'synthetic'>('all');
   const [byExpertData, setByExpertData] = useState<Record<string, Record<string, ImageEvaluationResponse>>>({});
   const [copiedLatex, setCopiedLatex] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onImportJSON) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        const evalMap: Record<string, ImageEvaluationResponse> = {};
+        if (Array.isArray(parsed?.evaluations)) {
+          for (const row of parsed.evaluations) {
+            if (row?.imageId) {
+              evalMap[row.imageId] = {
+                imageId: row.imageId,
+                q1_classification: row.q1_classification ?? null,
+                q2_realism: row.q2_realism ?? null,
+                q3_artifacts: row.q3_artifacts ?? null,
+                q4_plausibility: row.q4_plausibility ?? null,
+                decisionTimeMs: row.decisionTimeMs ?? undefined,
+                artifactTags: row.artifactTags ?? [],
+                experienceTier: row.experienceTier ?? undefined,
+                clinicalNotes: row.clinicalNotes || '',
+                evaluatedAt: row.evaluatedAt || new Date().toISOString(),
+              };
+            }
+          }
+          onImportJSON(evalMap, parsed?.metadata?.expertId);
+        } else if (parsed?.latestResponses || parsed?.responses) {
+          onImportJSON(parsed.latestResponses || parsed.responses, parsed?.expertId);
+        }
+      } catch (err) {
+        alert('Invalid evaluation JSON file.');
+        console.warn(err);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   // Fetch multi-reader data from backend API whenever modal opens
   useEffect(() => {
@@ -990,6 +1032,26 @@ export const AnalyticsDashboardModal: React.FC<AnalyticsDashboardModalProps> = (
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {onImportJSON && (
+              <>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleImportFile}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => importInputRef.current?.click()}
+                  className="px-3.5 py-2 rounded-full text-xs font-black bg-white hover:bg-slate-100 text-black border-2 border-black shadow-neo-sm hover:shadow-neo transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                  title="Import remote expert evaluation JSON onto this laptop"
+                >
+                  <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Import JSON</span>
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => exportFullReportToPDF(images, evaluations, expertId, experienceTier, mergedByExpert)}

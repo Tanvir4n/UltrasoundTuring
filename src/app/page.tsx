@@ -92,45 +92,99 @@ export default function AssessmentPage() {
     initialize100Slots();
   };
 
+  // Merge helper keeping the most recently evaluated response per imageId
+  const mergeEvaluationMaps = (
+    baseMap: Record<string, ImageEvaluationResponse>,
+    incomingMap: Record<string, ImageEvaluationResponse>
+  ): Record<string, ImageEvaluationResponse> => {
+    const merged: Record<string, ImageEvaluationResponse> = { ...baseMap };
+    for (const [id, inc] of Object.entries(incomingMap || {})) {
+      if (!inc) continue;
+      const existing = merged[id];
+      if (!existing) {
+        merged[id] = inc;
+      } else {
+        const tExisting = existing.evaluatedAt ? Date.parse(existing.evaluatedAt) : 0;
+        const tInc = inc.evaluatedAt ? Date.parse(inc.evaluatedAt) : 0;
+        if (tInc >= tExisting) {
+          merged[id] = { ...existing, ...inc };
+        }
+      }
+    }
+    return merged;
+  };
+
   useEffect(() => {
     fetchFolderImages();
 
-    const savedExpert = localStorage.getItem('ous_expert_id');
+    const savedExpert = localStorage.getItem('ous_expert_id') || '';
     if (savedExpert) setExpertId(savedExpert);
 
     const savedTier = localStorage.getItem('ous_expert_tier');
     if (savedTier) setExperienceTier(savedTier);
 
+    let localParsed: Record<string, ImageEvaluationResponse> = {};
     const savedEvals = localStorage.getItem('ous_evaluations');
     if (savedEvals) {
       try {
-        const parsedEvals = JSON.parse(savedEvals);
-        setEvaluations(parsedEvals);
-        // Sync existing localStorage responses to server files (data/responses.json & data/responses.csv)
-        if (parsedEvals && Object.keys(parsedEvals).length > 0) {
+        localParsed = JSON.parse(savedEvals) || {};
+        setEvaluations(localParsed);
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    // ALWAYS pull latest responses from server on page load/refresh and merge cleanly
+    const syncWithServer = async () => {
+      try {
+        const res = await fetch('/api/responses', { cache: 'no-store' });
+        const data = await res.json();
+        const serverResponses: Record<string, ImageEvaluationResponse> = data?.responses || {};
+
+        setEvaluations((prev) => {
+          const base = Object.keys(prev).length > 0 ? prev : localParsed;
+          const merged = mergeEvaluationMaps(base, serverResponses);
+          if (Object.keys(merged).length > 0) {
+            try {
+              localStorage.setItem('ous_evaluations', JSON.stringify(merged));
+            } catch {}
+          }
+          return merged;
+        });
+
+        // Push any local-only evaluations back to server if server didn't have them yet
+        if (Object.keys(localParsed).length > 0 && Object.keys(serverResponses).length === 0) {
           fetch('/api/responses', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               expertId: savedExpert || 'Anonymous',
-              allEvaluations: parsedEvals,
+              allEvaluations: localParsed,
             }),
           }).catch(() => {});
         }
-      } catch (e) {
-        console.warn(e);
+      } catch (err) {
+        console.warn('Could not sync with server API:', err);
       }
-    } else {
-      // Fallback: restore from backend file store (data/responses.json) if available
-      fetch('/api/responses')
-        .then((r) => r.json())
-        .then((data) => {
-          if (data?.responses && Object.keys(data.responses).length > 0) {
-            setEvaluations(data.responses);
-          }
-        })
-        .catch((err) => console.warn('Could not restore from server API:', err));
-    }
+    };
+
+    syncWithServer();
+
+    // Live polling every 6 seconds so remote Meet participants' clicks appear automatically on host laptop
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetch('/api/responses', { cache: 'no-store' })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data?.responses && Object.keys(data.responses).length > 0) {
+              setEvaluations((prev) => mergeEvaluationMaps(prev, data.responses));
+            }
+          })
+          .catch(() => {});
+      }
+    }, 6000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   // Sync state to LocalStorage & Backend API
@@ -294,36 +348,43 @@ export default function AssessmentPage() {
     }
   };
 
-  // Export full CSV with ground truth outcomes
-  const handleExportCSV = () => {
-    exportEvaluationsToCSV(images, evaluations, expertId);
+  // Helper to fetch latest server responses before exporting full 100-image results
+  const getLatestMergedForExport = async () => {
+    let byExpert = undefined;
+    let mergedEvals = evaluations;
+    try {
+      const res = await fetch('/api/responses', { cache: 'no-store' });
+      const data = await res.json();
+      if (data?.byExpert) byExpert = data.byExpert;
+      if (data?.responses) {
+        mergedEvals = mergeEvaluationMaps(evaluations, data.responses);
+      }
+    } catch {}
+    return { mergedEvals, byExpert };
   };
 
-  // Export full JSON with ground truth & summary metrics
-  const handleExportJSON = () => {
-    exportEvaluationsToJSON(images, evaluations, expertId);
+  // Export full 100-scan CSV with ground truth outcomes (from any page)
+  const handleExportCSV = async () => {
+    const { mergedEvals } = await getLatestMergedForExport();
+    exportEvaluationsToCSV(images, mergedEvals, expertId);
   };
 
-  // Export publication-grade PDF report (fetches multi-reader snapshot if available)
+  // Export full 100-scan JSON with ground truth & summary metrics (from any page)
+  const handleExportJSON = async () => {
+    const { mergedEvals } = await getLatestMergedForExport();
+    exportEvaluationsToJSON(images, mergedEvals, expertId);
+  };
+
+  // Export publication-grade full 100-scan PDF report (from any page)
   const handleExportPDF = async () => {
-    let byExpert = undefined;
-    try {
-      const res = await fetch('/api/responses');
-      const data = await res.json();
-      if (data?.byExpert) byExpert = data.byExpert;
-    } catch {}
-    exportFullReportToPDF(images, evaluations, expertId, experienceTier, byExpert);
+    const { mergedEvals, byExpert } = await getLatestMergedForExport();
+    await exportFullReportToPDF(images, mergedEvals, expertId, experienceTier, byExpert);
   };
 
-  // Export editable Microsoft Word / Google Docs (.doc) report
+  // Export editable full 100-scan Microsoft Word / Google Docs (.doc) report (from any page)
   const handleExportWord = async () => {
-    let byExpert = undefined;
-    try {
-      const res = await fetch('/api/responses');
-      const data = await res.json();
-      if (data?.byExpert) byExpert = data.byExpert;
-    } catch {}
-    exportFullReportToWord(images, evaluations, expertId, experienceTier, byExpert);
+    const { mergedEvals, byExpert } = await getLatestMergedForExport();
+    exportFullReportToWord(images, mergedEvals, expertId, experienceTier, byExpert);
   };
 
   // Scroll to slots section
@@ -680,6 +741,22 @@ export default function AssessmentPage() {
         onOpenGroundTruthManager={() => {
           setIsAnalyticsOpen(false);
           setIsGroundTruthOpen(true);
+        }}
+        onImportJSON={(importedEvals, importedExpertId) => {
+          const targetExpert = importedExpertId || expertId || 'Remote-Expert';
+          if (importedExpertId && !expertId) setExpertId(importedExpertId);
+          setEvaluations((prev) => {
+            const merged = mergeEvaluationMaps(prev, importedEvals);
+            try {
+              localStorage.setItem('ous_evaluations', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+          fetch('/api/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ expertId: targetExpert, allEvaluations: importedEvals }),
+          }).catch(() => {});
         }}
       />
 
